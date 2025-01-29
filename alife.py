@@ -16,23 +16,23 @@ from deap import base, creator, tools
 # -----------------------
 # Simulation Parameters
 # -----------------------
-GRID_WIDTH = 20              # Width of the grid
-GRID_HEIGHT = 20             # Height of the grid
+GRID_WIDTH = 20  # Width of the grid
+GRID_HEIGHT = 20  # Height of the grid
 INITIAL_POPULATION = 10
 INITIAL_ENERGY = 10
 
 # Movement & Energy
-BASE_MOVE_COST = 1           # Base energy cost per "step"
-EAT_GAIN = 5                 # Energy gained from eating one food unit
+BASE_MOVE_COST = 1  # Base energy cost per "step"
+EAT_GAIN = 5  # Energy gained from eating one food unit
 REPRODUCTION_THRESHOLD = 20  # Energy needed to reproduce
 TIMESTEPS = 80
-FOOD_REGEN_PROB = 0.01       # Probability that an empty cell spawns food each turn
+FOOD_REGEN_PROB = 0.01  # Probability that an empty cell spawns food each turn
 
 # Genome & Mutation
-MUTATION_RATE = 0.1          # Probability of a mutation happening on reproduction
-GENE_SPEED_INITIAL = 1       # Initial speed for all organisms (you can randomize if desired)
-GENE_SPEED_MIN = 0           # Minimum allowed speed
-GENE_SPEED_MAX = 5           # Maximum allowed speed (optional clamp)
+MUTATION_RATE = 0.1  # Probability of a mutation happening on reproduction
+GENE_SPEED_INITIAL = 1  # Initial speed for all organisms (you can randomize if desired)
+GENE_SPEED_MIN = 0  # Minimum allowed speed
+GENE_SPEED_MAX = 5  # Maximum allowed speed (optional clamp)
 
 # For reproducibility, uncomment:
 # random.seed(42)
@@ -41,10 +41,12 @@ GENE_SPEED_MAX = 5           # Maximum allowed speed (optional clamp)
 # **DEAP Setup**
 # -----------------------
 
+
 # Define a fitness function (this might need adjustment based on your needs)
 def evaluate(individual):
     # For now, we are using the speed parameter, but you can create a more complex function to evaluate your organisms.
-    return individual.speed,
+    return (individual.speed,)
+
 
 # Create a fitness class that minimizes the value, for example
 creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
@@ -57,12 +59,25 @@ creator.create("Individual", list, fitness=creator.FitnessMin)
 toolbox = base.Toolbox()
 
 # Register the individual creator, mutation, and selection
-toolbox.register("individual", tools.initRepeat, creator.Individual, lambda: random.randint(GENE_SPEED_MIN, GENE_SPEED_MAX), n=1)
+toolbox.register(
+    "individual",
+    tools.initRepeat,
+    creator.Individual,
+    lambda: random.randint(GENE_SPEED_MIN, GENE_SPEED_MAX),
+    n=1,
+)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 # mutation operator
-toolbox.register("mutate", tools.mutUniformInt, low=GENE_SPEED_MIN, up=GENE_SPEED_MAX, indpb=MUTATION_RATE)
+toolbox.register(
+    "mutate",
+    tools.mutUniformInt,
+    low=GENE_SPEED_MIN,
+    up=GENE_SPEED_MAX,
+    indpb=MUTATION_RATE,
+)
 toolbox.register("select", tools.selTournament, tournsize=3)
 toolbox.register("evaluate", evaluate)
+
 
 # -----------------------
 # Organism Class
@@ -75,20 +90,23 @@ class Organism:
     - genome: currently just 'speed'
     - generation
     """
+
     def __init__(self, x, y, energy=INITIAL_ENERGY, individual=None, generation=0):
         self.x = x
         self.y = y
         self.energy = energy
         self.generation = generation
-        #if individual is not None, use that, otherwise create a random one.
+        # if individual is not None, use that, otherwise create a random one.
         if individual is None:
-            self.individual = creator.Individual([random.randint(GENE_SPEED_MIN, GENE_SPEED_MAX)])
+            self.individual = creator.Individual(
+                [random.randint(GENE_SPEED_MIN, GENE_SPEED_MAX)]
+            )
         else:
             self.individual = individual
 
     @property
     def speed(self):
-        #this is how we get the speed of an organism from its genome
+        # this is how we get the speed of an organism from its genome
         return self.individual
 
     def move(self, grid_width, grid_height):
@@ -97,14 +115,14 @@ class Organism:
         Each step costs BASE_MOVE_COST energy.
         """
         for _ in range(self.individual[0]):
-            direction = random.choice(['UP', 'DOWN', 'LEFT', 'RIGHT'])
-            if direction == 'UP':
+            direction = random.choice(["UP", "DOWN", "LEFT", "RIGHT"])
+            if direction == "UP":
                 self.y = (self.y - 1) % grid_height
-            elif direction == 'DOWN':
+            elif direction == "DOWN":
                 self.y = (self.y + 1) % grid_height
-            elif direction == 'LEFT':
+            elif direction == "LEFT":
                 self.x = (self.x - 1) % grid_width
-            elif direction == 'RIGHT':
+            elif direction == "RIGHT":
                 self.x = (self.x + 1) % grid_width
 
             # Pay energy cost for each step
@@ -131,17 +149,17 @@ class Organism:
             self.energy -= child_energy
             child_generation = self.generation + 1
 
-            #create an offspring from an existing genome
+            # create an offspring from an existing genome
             offspring = toolbox.clone(self.individual)
-            #apply mutation, we are using the mutate method we added to the toolbox
-            offspring, = toolbox.mutate(offspring)
+            # apply mutation, we are using the mutate method we added to the toolbox
+            (offspring,) = toolbox.mutate(offspring)
 
             offspring = Organism(
                 x=self.x,
                 y=self.y,
                 energy=child_energy,
                 individual=offspring,
-                generation=child_generation
+                generation=child_generation,
             )
             return offspring
         return None
@@ -149,6 +167,7 @@ class Organism:
     def is_dead(self):
         """If energy <= 0, organism is considered dead."""
         return self.energy <= 0
+
 
 # -----------------------
 # Environment Setup
@@ -164,20 +183,17 @@ def create_food_grid(width, height):
         grid.append(row)
     return grid
 
+
 def create_initial_population(n, width, height, toolbox):
     """Create n organisms in random positions."""
     population = []
     for _ in range(n):
         x = random.randint(0, width - 1)
         y = random.randint(0, height - 1)
-        organism = Organism(
-            x=x,
-            y=y,
-            energy=INITIAL_ENERGY,
-            generation=0
-        )
+        organism = Organism(x=x, y=y, energy=INITIAL_ENERGY, generation=0)
         population.append(organism)
     return population
+
 
 # -----------------------
 # Simulation Loop
@@ -187,21 +203,27 @@ def run_simulation():
     food_grid = create_food_grid(GRID_WIDTH, GRID_HEIGHT)
 
     # Create initial population
-    organisms = create_initial_population(INITIAL_POPULATION, GRID_WIDTH, GRID_HEIGHT, toolbox)
+    organisms = create_initial_population(
+        INITIAL_POPULATION, GRID_WIDTH, GRID_HEIGHT, toolbox
+    )
 
     # Prepare CSV logging
     output_file = "results.csv"
-    with open(output_file, mode='w', newline='') as csvfile:
+    with open(output_file, mode="w", newline="") as csvfile:
         writer = csv.writer(csvfile)
         # Add columns for population, average speed, average generation
-        writer.writerow(["Timestep", "PopulationSize", "AverageSpeed", "AverageGeneration"])
+        writer.writerow(
+            ["Timestep", "PopulationSize", "AverageSpeed", "AverageGeneration"]
+        )
 
         # Log initial state (t=0)
         pop_size = len(organisms)
         avg_speed = average_speed(organisms)
         avg_gen = average_generation(organisms)
         writer.writerow([0, pop_size, avg_speed, avg_gen])
-        print(f"Timestep 0: Pop={pop_size}, AvgSpeed={avg_speed:.2f}, AvgGen={avg_gen:.2f}")
+        print(
+            f"Timestep 0: Pop={pop_size}, AvgSpeed={avg_speed:.2f}, AvgGen={avg_gen:.2f}"
+        )
 
         # Main simulation loop
         for t in range(1, TIMESTEPS + 1):
@@ -238,9 +260,12 @@ def run_simulation():
 
             # Log to CSV
             writer.writerow([t, pop_size, avg_speed, avg_gen])
-            print(f"Timestep {t}: Pop={pop_size}, AvgSpeed={avg_speed:.2f}, AvgGen={avg_gen:.2f}")
+            print(
+                f"Timestep {t}: Pop={pop_size}, AvgSpeed={avg_speed:.2f}, AvgGen={avg_gen:.2f}"
+            )
 
     print(f"Simulation complete. Results written to {output_file}.")
+
 
 # -----------------------
 # Helper Functions
@@ -251,11 +276,13 @@ def average_speed(organisms):
         return 0
     return sum(org.individual[0] for org in organisms) / len(organisms)
 
+
 def average_generation(organisms):
     """Compute average generation across living organisms."""
     if len(organisms) == 0:
         return 0
     return sum(org.generation for org in organisms) / len(organisms)
+
 
 # -----------------------
 # Main Entry Point
