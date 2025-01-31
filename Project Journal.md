@@ -98,7 +98,7 @@ This sprint gave me a good initial understanding of some strategies I can employ
 *   Internal monologue snippet from deepseek
     *   Prompt 1: "I have an artifical life simulation my team is working on. I have been tasked with the data storage and data visualization, this is my main task this sprint. Give me some advice
 
-    Set up data analysis tools (Pandas, NumPy) and storage systems (HDF5)."
+       Set up data analysis tools (Pandas, NumPy) and storage systems (HDF5)."
     *   Thought 1: "Okay, so the user is working on an artificial life simulation and is responsible for data storage and visualization this sprint. They mentioned setting up Pandas, NumPy, and HDF5. Let me break down how to approach this.
         
         First, data storage. HDF5 is a good choice because it's efficient for large datasets. I should explain why HDF5 is beneficial here—like handling large, complex data with compression. Maybe suggest using h5py or PyTables in Python. They might need to structure their data properly. Organizing datasets by timestep, agents, or environment layers makes sense. Also, chunking and compression settings are important for performance. Metadata is crucial for context, so they should include parameters like simulation configs, timestamps, etc.
