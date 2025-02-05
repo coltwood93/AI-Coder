@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
 Features:
-- Organisms have a genome (speed gene).
-- Mutation occurs on reproduction (speed can change).
-- Each organism tracks its generation.
-- We log population size, average speed, and average generation over time.
+- Organisms have a genome (speed, metabolism, and vision genes).
+- Mutation occurs on reproduction (genes can change).
+- Each organism tracks its generation and offspring count.
+- We log population size, average speed, average generation, average metabolism, and average vision over time.
 """
 
 import random
