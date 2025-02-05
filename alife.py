@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 """
-Step 5: Introduce Genetic Variation & Evolution
-
 Features:
 - Organisms have a genome (speed gene).
 - Mutation occurs on reproduction (speed can change).
@@ -33,8 +31,8 @@ MUTATION_RATE = 0.1  # Probability of a mutation happening on reproduction
 GENE_SPEED_INITIAL = 1  # Initial speed for all organisms (you can randomize if desired)
 GENE_SPEED_MIN = 0  # Minimum allowed speed
 GENE_SPEED_MAX = 5  # Maximum allowed speed (optional clamp)
-GENE_METABOLISM_MIN = 1  # Minimum allowed metabolism
-GENE_METABOLISM_MAX = 10  # Maximum allowed metabolism
+GENE_METABOLISM_MIN = 0.5  # Minimum allowed metabolism (50% of base move cost)
+GENE_METABOLISM_MAX = 2.0  # Maximum allowed metabolism (200% of base move cost)
 GENE_VISION_MIN = 1  # Minimum allowed vision
 GENE_VISION_MAX = 5  # Maximum allowed vision
 
@@ -48,12 +46,17 @@ GENE_VISION_MAX = 5  # Maximum allowed vision
 
 # Define a fitness function (this might need adjustment based on your needs)
 def evaluate(individual):
-    # For now, we are using the speed parameter, but you can create a more complex function to evaluate your organisms.
-    return (individual.speed,)
+    # Fitness is a combination of speed, metabolism, vision, and offspring count
+    speed = individual[0]
+    metabolism = individual[1]
+    vision = individual[2]
+    offspring_count = individual.offspring_count
+    fitness = speed - (metabolism * BASE_MOVE_COST) + (vision * 0.5) + (offspring_count * 2)
+    return (fitness,)
 
 
 # Create a fitness class that minimizes the value, for example
-creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
+creator.create("FitnessMax", base.Fitness, weights=(1.0,))
 
 # Create the Individual class, inheriting from the list class.
 # You can replace the single speed value with a more complex genome.
@@ -102,6 +105,7 @@ class Organism:
         self.y = y
         self.energy = energy
         self.generation = generation
+        self.offspring_count = 0
         # if individual is not None, use that, otherwise create a random one.
         if individual is None:
             self.individual = creator.Individual(
@@ -179,6 +183,7 @@ class Organism:
                 individual=offspring,
                 generation=child_generation,
             )
+            self.offspring_count += 1
             return offspring
         return None
 
