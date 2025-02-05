@@ -33,6 +33,10 @@ MUTATION_RATE = 0.1  # Probability of a mutation happening on reproduction
 GENE_SPEED_INITIAL = 1  # Initial speed for all organisms (you can randomize if desired)
 GENE_SPEED_MIN = 0  # Minimum allowed speed
 GENE_SPEED_MAX = 5  # Maximum allowed speed (optional clamp)
+GENE_METABOLISM_MIN = 1  # Minimum allowed metabolism
+GENE_METABOLISM_MAX = 10  # Maximum allowed metabolism
+GENE_VISION_MIN = 1  # Minimum allowed vision
+GENE_VISION_MAX = 5  # Maximum allowed vision
 
 # For reproducibility, uncomment:
 # random.seed(42)
@@ -63,7 +67,9 @@ toolbox.register(
     "individual",
     tools.initRepeat,
     creator.Individual,
-    lambda: random.randint(GENE_SPEED_MIN, GENE_SPEED_MAX),
+    lambda: [random.randint(GENE_SPEED_MIN, GENE_SPEED_MAX),  # Speed gene
+             random.randint(GENE_METABOLISM_MIN, GENE_METABOLISM_MAX),  # Metabolism gene
+             random.randint(GENE_VISION_MIN, GENE_VISION_MAX)],  # Vision gene
     n=1,
 )
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
@@ -71,8 +77,8 @@ toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 toolbox.register(
     "mutate",
     tools.mutUniformInt,
-    low=GENE_SPEED_MIN,
-    up=GENE_SPEED_MAX,
+    low=[GENE_SPEED_MIN, GENE_METABOLISM_MIN, GENE_VISION_MIN],
+    up=[GENE_SPEED_MAX, GENE_METABOLISM_MAX, GENE_VISION_MAX],
     indpb=MUTATION_RATE,
 )
 toolbox.register("select", tools.selTournament, tournsize=3)
@@ -99,7 +105,11 @@ class Organism:
         # if individual is not None, use that, otherwise create a random one.
         if individual is None:
             self.individual = creator.Individual(
-                [random.randint(GENE_SPEED_MIN, GENE_SPEED_MAX)]
+                [
+                    random.randint(GENE_SPEED_MIN, GENE_SPEED_MAX),  # Speed gene
+                    random.randint(GENE_METABOLISM_MIN, GENE_METABOLISM_MAX),  # Metabolism gene
+                    random.randint(GENE_VISION_MIN, GENE_VISION_MAX)  # Vision gene
+                ]
             )
         else:
             self.individual = individual
@@ -107,7 +117,15 @@ class Organism:
     @property
     def speed(self):
         # this is how we get the speed of an organism from its genome
-        return self.individual
+        return self.individual[0]
+    
+    @property
+    def metabolism(self):
+        return self.individual[1]
+
+    @property
+    def vision(self):
+        return self.individual[2]
 
     def move(self, grid_width, grid_height):
         """
