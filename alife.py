@@ -357,10 +357,17 @@ class SimulationState:
         # deep copy
         self.producers = copy.deepcopy(producers)
         self.consumers = copy.deepcopy(consumers)
+        self.highest_generation = 0  # Track highest generation in each state
 
 
 def store_state(history, t, producers, consumers):
     st = SimulationState(t, producers, consumers)
+    # Update highest generation reached
+    if consumers:
+        st.highest_generation = max(st.highest_generation, max(c.generation for c in consumers))
+    # Inherit previous highest generation if it's higher
+    if history and history[-1].highest_generation > st.highest_generation:
+        st.highest_generation = history[-1].highest_generation
     history.append(st)
 
 
@@ -397,9 +404,10 @@ def average_vision(cons):
 def run_simulation_interactive():
     pygame.init()
     screen = pygame.display.set_mode((DISPLAY_WIDTH, DISPLAY_HEIGHT))
-    pygame.display.set_caption("Immediate removal of eaten producers + occupant limit")
+    pygame.display.set_caption("A-Life Simulation")
     clock = pygame.time.Clock()
     font = pygame.font.SysFont(None, 24)
+    stats_font = pygame.font.SysFont(None, 20)
     label_font = pygame.font.SysFont(None, 16)
 
     csvfilename = "results_interactive.csv"
@@ -500,6 +508,14 @@ def run_simulation_interactive():
         load_state_into_sim(st, producers, consumers)
 
         screen.fill((0, 0, 0))
+        
+        # Draw simulation grid area
+        pygame.draw.rect(screen, (20, 20, 20), (0, 0, GRID_WIDTH * CELL_SIZE, GRID_HEIGHT * CELL_SIZE))
+        
+        # Draw stats panel background
+        stats_panel = pygame.Surface((STATS_PANEL_WIDTH, DISPLAY_HEIGHT))
+        stats_panel.fill((30, 30, 30))
+        screen.blit(stats_panel, (GRID_WIDTH * CELL_SIZE, 0))
 
         # draw producers
         for p in producers:
@@ -526,20 +542,44 @@ def run_simulation_interactive():
             r = label_surf.get_rect(center=(cx + CELL_SIZE // 2, cy + CELL_SIZE // 2))
             screen.blit(label_surf, r)
 
-        # overhead stats
+        # Stats calculations
         np = len(producers)
         nc = len(consumers)
         sp = average_speed(consumers)
         gn = average_generation(consumers)
         mb = average_metabolism(consumers)
         vs = average_vision(consumers)
-        status = "PAUSED" if is_paused else "RUN"
-        info_str = (
-            f"t={current_step} | P={np} | C={nc} | "
-            f"Sp={sp:.2f} | G={gn:.2f} | Met={mb:.2f} | Vis={vs:.2f} | {status}"
-        )
-        text_surf = font.render(info_str, True, (255, 255, 255))
-        screen.blit(text_surf, (10, 10))
+        current_state = history[current_step]
+        max_gen = current_state.highest_generation
+        status = "PAUSED" if is_paused else "RUNNING"
+
+        # Draw stats panel content
+        stats_x = GRID_WIDTH * CELL_SIZE + 10
+        stats_y = 10
+        line_height = 25
+
+        def draw_stat(label, value, y_pos, color=(200, 200, 200)):
+            text = f"{label}: {value}"
+            surf = stats_font.render(text, True, color)
+            screen.blit(surf, (stats_x, y_pos))
+            return y_pos + line_height
+
+        current_y = stats_y
+        current_y = draw_stat("Timestep", current_step, current_y)
+        current_y = draw_stat("Status", status, current_y, (255, 255, 0) if is_paused else (0, 255, 0))
+        current_y += line_height/2  # Spacing
+        
+        current_y = draw_stat("Producers", np, current_y, (0, 255, 0))
+        current_y = draw_stat("Consumers", nc, current_y, (255, 255, 255))
+        current_y += line_height/2  # Spacing
+        
+        current_y = draw_stat("Max Generation", max_gen, current_y, (255, 200, 0))
+        current_y = draw_stat("Avg Generation", f"{gn:.1f}", current_y)
+        current_y += line_height/2  # Spacing
+        
+        current_y = draw_stat("Avg Speed", f"{sp:.1f}", current_y)
+        current_y = draw_stat("Avg Metabolism", f"{mb:.2f}", current_y)
+        current_y = draw_stat("Avg Vision", f"{vs:.1f}", current_y)
 
         pygame.display.flip()
         clock.tick(FPS)
