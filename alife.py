@@ -216,9 +216,23 @@ class Consumer:
     def vision(self):
         return int(self.genes[2])
 
+    def count_nearby_consumers(self, consumers_list, radius=2):
+        count = 0
+        for c in consumers_list:
+            if c is not self:
+                dx = abs(c.x - self.x)
+                dy = abs(c.y - self.y)
+                if dx <= radius and dy <= radius:
+                    count += 1
+        return count
+
     def update(self, producers_list, consumers_list):
-        # baseline cost
-        self.energy -= BASE_LIFE_COST
+        # Competition penalty based on nearby consumers
+        nearby = self.count_nearby_consumers(consumers_list)
+        competition_cost = nearby * 0.1  # Each nearby consumer adds 0.1 to energy cost
+        
+        # baseline cost (now scales with speed and competition)
+        self.energy -= (BASE_LIFE_COST + (self.speed * 0.2) + competition_cost)
         if self.energy <= 0:
             return
 
@@ -227,7 +241,7 @@ class Consumer:
             steps = self.speed
             for _ in range(steps):
                 self.move_towards(direction, consumers_list)
-                self.energy -= (MOVE_COST_FACTOR * self.metabolism)
+                self.energy -= (MOVE_COST_FACTOR * self.metabolism * (1 + self.speed * 0.1))  # Added speed factor to movement cost
                 if self.energy <= 0:
                     return
                 if self.check_and_eat_immediate(producers_list):
@@ -333,8 +347,9 @@ class Consumer:
         return False
 
     def reproduce(self, consumers_list):
-        child_en = self.energy // 2
-        self.energy -= child_en
+        # Modified to make reproduction more costly for parent
+        child_en = self.energy * 0.4  # Changed from energy/2 to 40% of energy
+        self.energy *= 0.5  # Parent loses 50% of energy (total cost: 90% of energy)
         baby_genes = copy.deepcopy(self.genes)
 
         # Use DEAP's mutation operator
