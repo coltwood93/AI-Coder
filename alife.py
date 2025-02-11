@@ -14,7 +14,6 @@ Two-Species A-Life Simulation with immediate producer removal when eaten:
 import sys
 import random
 import copy
-import math
 import csv
 import pygame
 
@@ -27,37 +26,38 @@ from deap import base, creator, tools
 GRID_WIDTH = 20
 GRID_HEIGHT = 20
 CELL_SIZE = 20
-DISPLAY_WIDTH = GRID_WIDTH * CELL_SIZE
+STATS_PANEL_WIDTH = 200  # Width of the stats panel
+DISPLAY_WIDTH = GRID_WIDTH * CELL_SIZE + STATS_PANEL_WIDTH
 DISPLAY_HEIGHT = GRID_HEIGHT * CELL_SIZE
 
 # Producer
-INITIAL_PRODUCERS = 15
-PRODUCER_ENERGY_GAIN = 0.3
+INITIAL_PRODUCERS = 25  # Increased from 15 to provide more initial food
+PRODUCER_ENERGY_GAIN = 0.6  # Increased from 0.4 to help sustain higher seed rate
 PRODUCER_MAX_ENERGY = 30
 PRODUCER_SEED_COST = 2
-PRODUCER_SEED_PROB = 0.2
-PRODUCER_INIT_ENERGY_RANGE = (5, 15)
+PRODUCER_SEED_PROB = 0.25  # Increased from 0.15 to help producers spread more
+PRODUCER_INIT_ENERGY_RANGE = (8, 15)  # Increased minimum energy
 NO_SEED_UNDER_CONSUMER = True  # If True, won't seed under a consumer
 
 # Consumer
-INITIAL_CONSUMERS = 15
-CONSUMER_INIT_ENERGY_RANGE = (5, 25)
-BASE_LIFE_COST = 1.5
-MOVE_COST_FACTOR = 0.15
-EAT_GAIN = 5
-CONSUMER_REPRO_THRESHOLD = 20
+INITIAL_CONSUMERS = 8
+CONSUMER_INIT_ENERGY_RANGE = (15, 25)
+BASE_LIFE_COST = 1.5  # Increased from 1.2 to make survival harder
+MOVE_COST_FACTOR = 0.15  # Increased from 0.12 to make movement more costly
+EAT_GAIN = 4  # Decreased from 5 to make eating less rewarding
+CONSUMER_REPRO_THRESHOLD = 45  # Increased from 40 to make reproduction even harder
 
 # Genes: [speed, metabolism, vision]
 MUTATION_RATE = 0.1
-SPEED_RANGE = (0, 5)
-METABOLISM_RANGE = (0.5, 2.0)
-VISION_RANGE = (1, 3)
+SPEED_RANGE = (1, 4)  # Changed from (0, 5) to ensure some movement and cap max speed
+METABOLISM_RANGE = (0.6, 1.8)  # Adjusted range for more balanced metabolism
+VISION_RANGE = (1, 4)  # Increased max vision from 3 to 4
 
 # Force random movement if low energy + no plant
-CRITICAL_ENERGY = 8
+CRITICAL_ENERGY = 6  # Decreased from 8 to make them search for food sooner
 
 # Optional discovery bonus
-DISCOVERY_BONUS = 0.2
+DISCOVERY_BONUS = 0.2  # Decreased from 0.3 to make exploration less rewarding
 TRACK_CELL_HISTORY_LEN = 20
 
 MAX_TIMESTEPS = 200
