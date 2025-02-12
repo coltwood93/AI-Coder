@@ -44,22 +44,23 @@ NO_SEED_UNDER_CONSUMER = True  # If True, won't seed under a consumer
 # Consumer
 INITIAL_CONSUMERS = 8
 CONSUMER_INIT_ENERGY_RANGE = (15, 25)
-BASE_LIFE_COST = 1.5  # Increased from 1.2 to make survival harder
-MOVE_COST_FACTOR = 0.15  # Increased from 0.12 to make movement more costly
-EAT_GAIN = 4  # Decreased from 5 to make eating less rewarding
-CONSUMER_REPRO_THRESHOLD = 45  # Increased from 40 to make reproduction even harder
+BASE_LIFE_COST = 1.5  # Restored from 2.0
+MOVE_COST_FACTOR = 0.15  # Restored from 0.25
+EAT_GAIN = 4
+CONSUMER_REPRO_THRESHOLD = 45
+CRITICAL_ENERGY = 6  # Restored from 8
 
 # Genes: [speed, metabolism, vision]
 MUTATION_RATE = 0.1
-SPEED_RANGE = (1, 4)  # Changed from (0, 5) to ensure some movement and cap max speed
-METABOLISM_RANGE = (0.6, 1.8)  # Adjusted range for more balanced metabolism
-VISION_RANGE = (1, 4)  # Increased max vision from 3 to 4
+SPEED_RANGE = (1, 4)
+METABOLISM_RANGE = (0.8, 1.2)  # Restored range
+VISION_RANGE = (1, 4)
 
 # Force random movement if low energy + no plant
-CRITICAL_ENERGY = 6  # Decreased from 8 to make them search for food sooner
+CRITICAL_ENERGY = 6
 
 # Optional discovery bonus
-DISCOVERY_BONUS = 0.2  # Decreased from 0.3 to make exploration less rewarding
+DISCOVERY_BONUS = 0.3  # Restored from 0.2
 TRACK_CELL_HISTORY_LEN = 20
 
 MAX_TIMESTEPS = 200
@@ -256,7 +257,7 @@ class Consumer:
             steps = self.speed
             for _ in range(steps):
                 self.move_towards(direction, consumers_list)
-                self.energy -= (MOVE_COST_FACTOR * self.metabolism * (1 + self.speed * 0.1))  # Added speed factor to movement cost
+                self.energy -= (MOVE_COST_FACTOR * self.metabolism * (1 + self.speed * 0.1))
                 if self.energy <= 0:
                     self.release_nutrients(environment)
                     return
@@ -365,9 +366,8 @@ class Consumer:
         return False
 
     def reproduce(self, consumers_list):
-        # Modified to make reproduction more costly for parent
-        child_en = self.energy * 0.4  # Changed from energy/2 to 40% of energy
-        self.energy *= 0.5  # Parent loses 50% of energy (total cost: 90% of energy)
+        child_en = self.energy / 2
+        self.energy /= 2
         baby_genes = copy.deepcopy(self.genes)
 
         # Use DEAP's mutation operator
