@@ -15,27 +15,45 @@ class HDF5Storage:
         with h5py.File(self.filename, "w") as f:
             pass
     
+    def _to_python_scalars(self, obj_dict):
+        """
+        Convert any NumPy scalars in obj_dict to native Python types.
+        """
+        py_dict = {}
+        for k, v in obj_dict.items():
+            if isinstance(v, np.integer):
+                py_dict[k] = int(v)
+            elif isinstance(v, np.floating):
+                py_dict[k] = float(v)
+            else:
+                py_dict[k] = v
+        return py_dict
+
     # --- Saving Functions ---
     def save_board(self, timestep, board, dataset_name="board"):
         with h5py.File(self.filename, "a") as f:
             group = f.require_group(f"timestep_{timestep}")
             if dataset_name in group:
                 del group[dataset_name]
-            board_array = np.array(board, dtype=np.int8)
+            board_array = np.array(board, dtype=np.float32)
             group.create_dataset(dataset_name, data=board_array, compression="gzip", chunks=True)
     
     def save_producers(self, timestep, producers):
-        """
-        Save producers as JSON strings.
-        """
         with h5py.File(self.filename, "a") as f:
             group = f.require_group(f"timestep_{timestep}")
-            data = [json.dumps(p.__dict__) for p in producers]
+            # Convert each Producer's __dict__ to only have Python-native types
+            data_dicts = []
+            for p in producers:
+                # Convert NumPy floats/ints to Python float/int
+                p_dict = self._to_python_scalars(p.__dict__)
+                data_dicts.append(json.dumps(p_dict))
             dt = h5py.string_dtype(encoding="utf-8")
             if "producers" in group:
                 del group["producers"]
-            group.create_dataset("producers", data=np.array(data, dtype=dt), dtype=dt, chunks=True)
-    
+            group.create_dataset("producers",
+                                data=np.array(data_dicts, dtype=dt),
+                                dtype=dt, chunks=True)
+            
     def save_consumers(self, timestep, consumers):
         """
         Save consumers as JSON strings.
