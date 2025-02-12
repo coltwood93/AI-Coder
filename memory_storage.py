@@ -1,8 +1,8 @@
 import os
 import numpy as np
 
-# DummyOrganism must be available in the global namespace.
-# (Replace this with your actual organism class if needed.)
+# For testing, we keep DummyOrganism here.
+# In your simulation, you would import your actual Consumer class.
 class DummyOrganism:
     def __init__(self, x, y, energy, speed, generation, species, id, parent_id=None):
         self.x = x
@@ -18,10 +18,10 @@ class MemoryResidentSimulationStore:
     def __init__(self, mode="live"):
         """
         Initialize the in‑memory simulation store.
-        
+
         Parameters:
           mode (str): "live" for a running simulation (updates allowed)
-                      or "replay" for a replay (only loading allowed).
+                      or "replay" for a replay (read-only).
         """
         if mode not in ("live", "replay"):
             raise ValueError("mode must be either 'live' or 'replay'")
@@ -29,37 +29,24 @@ class MemoryResidentSimulationStore:
         self.states = {}  # Dictionary keyed by timestep.
         self.current_timestep = None
 
-    def update_state(self, timestep, board, organisms, debug_logs):
+    def update_state(self, timestep, board, producers, consumers, debug_logs):
         """
         Update the entire state for a given timestep.
-        This method extracts all fields from the provided data and stores them.
-        
+
         Parameters:
-          - timestep (int): the current simulation timestep.
-          - board: a 2D list (or array) representing the gameboard.
-          - organisms: list of organism objects.
+          - timestep (int): current simulation timestep.
+          - board: a 2D list (or array) representing the game board.
+          - producers: list of producer objects.
+          - consumers: list of consumer objects.
           - debug_logs: list of log messages (strings) for this timestep.
         """
         if self.mode != "live":
             raise RuntimeError("Cannot update state in replay mode.")
         
-        population_data = {
-            "positions": [[org.x, org.y] for org in organisms],
-            "energy": [org.energy for org in organisms],
-            "speed": [org.speed for org in organisms],
-            "generation": [org.generation for org in organisms],
-            "debug_logs": debug_logs  # Stored here for convenience.
-        }
-        species_names = [org.species for org in organisms]
-        lineage = {
-            "organism_ids": [org.id for org in organisms],
-            "parent_ids": [org.parent_id if org.parent_id is not None else "None" for org in organisms]
-        }
         state = {
             "board": board,
-            "population": population_data,
-            "species_names": species_names,
-            "lineage": lineage,
+            "producers": producers,
+            "consumers": consumers,
             "debug_logs": debug_logs
         }
         self.states[timestep] = state
@@ -68,31 +55,20 @@ class MemoryResidentSimulationStore:
 
     # --- Piecewise Update Methods ---
     def update_board(self, timestep, board):
-        """Update only the gameboard for the given timestep."""
+        """Update only the board for the given timestep."""
         self.states.setdefault(timestep, {})["board"] = board
         self.current_timestep = timestep
         self.update_mode_based_on_state()
 
-    def update_population(self, timestep, population_data, species_names):
-        """
-        Update only the population data for the given timestep.
-        
-        Parameters:
-        - population_data: dict with keys "positions", "energy", "speed", "generation".
-        - species_names: list of species strings.
-        """
-        state = self.states.setdefault(timestep, {})
-        # Ensure the population dictionary always has the "debug_logs" key.
-        if "debug_logs" not in population_data:
-            population_data["debug_logs"] = None
-        state["population"] = population_data
-        state["species_names"] = species_names
+    def update_producers(self, timestep, producers):
+        """Update only the producers list for the given timestep."""
+        self.states.setdefault(timestep, {})["producers"] = producers
         self.current_timestep = timestep
         self.update_mode_based_on_state()
 
-    def update_lineage(self, timestep, lineage):
-        """Update only the lineage data for the given timestep."""
-        self.states.setdefault(timestep, {})["lineage"] = lineage
+    def update_consumers(self, timestep, consumers):
+        """Update only the consumers list for the given timestep."""
+        self.states.setdefault(timestep, {})["consumers"] = consumers
         self.current_timestep = timestep
         self.update_mode_based_on_state()
 
@@ -102,76 +78,18 @@ class MemoryResidentSimulationStore:
         self.current_timestep = timestep
         self.update_mode_based_on_state()
 
-    # --- Methods for Individual Organism Updates ---
-    def update_organism_position(self, timestep, organism_index, new_position):
-        """
-        Update the position of a specific organism in the population.
-        
-        Parameters:
-          - timestep (int): the timestep in which to update.
-          - organism_index (int): index of the organism in the population list.
-          - new_position (list or tuple): the new [x, y] coordinates.
-        """
-        state = self.states.get(timestep)
-        if state is None or "population" not in state:
-            raise ValueError("No state or population data found for timestep %s" % timestep)
-        state["population"]["positions"][organism_index] = list(new_position)
-    
-    def add_organism(self, timestep, organism):
-        """
-        Add a new organism to the population at the given timestep.
-        
-        Updates the population lists, species names, and lineage.
-        """
-        state = self.states.setdefault(timestep, {})
-        pop = state.setdefault("population", {
-            "positions": [],
-            "energy": [],
-            "speed": [],
-            "generation": [],
-            "debug_logs": state.get("debug_logs", [])
-        })
-        pop["positions"].append([organism.x, organism.y])
-        pop["energy"].append(organism.energy)
-        pop["speed"].append(organism.speed)
-        pop["generation"].append(organism.generation)
-        state.setdefault("species_names", []).append(organism.species)
-        lin = state.setdefault("lineage", {"organism_ids": [], "parent_ids": []})
-        lin["organism_ids"].append(organism.id)
-        lin["parent_ids"].append(organism.parent_id if organism.parent_id is not None else "None")
-    
-    def remove_organism(self, timestep, organism_index):
-        """
-        Remove an organism from the population at the given timestep.
-        
-        Removes entries from population, species names, and lineage.
-        """
-        state = self.states.get(timestep)
-        if state is None or "population" not in state:
-            raise ValueError("No state or population data found for timestep %s" % timestep)
-        pop = state["population"]
-        for key in ["positions", "energy", "speed", "generation"]:
-            pop[key].pop(organism_index)
-        state["species_names"].pop(organism_index)
-        state["lineage"]["organism_ids"].pop(organism_index)
-        state["lineage"]["parent_ids"].pop(organism_index)
-
-    # --- Getters for Individual Pieces ---
+    # --- Getters ---
     def get_board(self, timestep=None):
         ts = timestep if timestep is not None else self.current_timestep
         return self.states.get(ts, {}).get("board", None)
 
-    def get_population(self, timestep=None):
+    def get_producers(self, timestep=None):
         ts = timestep if timestep is not None else self.current_timestep
-        return self.states.get(ts, {}).get("population", None)
+        return self.states.get(ts, {}).get("producers", None)
 
-    def get_species_names(self, timestep=None):
+    def get_consumers(self, timestep=None):
         ts = timestep if timestep is not None else self.current_timestep
-        return self.states.get(ts, {}).get("species_names", None)
-
-    def get_lineage(self, timestep=None):
-        ts = timestep if timestep is not None else self.current_timestep
-        return self.states.get(ts, {}).get("lineage", None)
+        return self.states.get(ts, {}).get("consumers", None)
 
     def get_debug_logs(self, timestep=None):
         ts = timestep if timestep is not None else self.current_timestep
@@ -186,122 +104,74 @@ class MemoryResidentSimulationStore:
     def load_simulation_state(self, timestep=None):
         """
         Return a list of tuples (timestep, state).
-        If a specific timestep is provided, return a list with one tuple if exists, else empty list.
+        If timestep is provided, returns one tuple if exists, else empty list.
         """
         if timestep is not None:
             if timestep in self.states:
                 return [(timestep, self.states[timestep])]
-            else:
-                return []
-        else:
-            return sorted(self.states.items(), key=lambda x: x[0])
+            return []
+        return sorted(self.states.items(), key=lambda x: x[0])
     
-    def load_all_population_data(self, timestep=None):
-        if timestep is not None:
-            if timestep in self.states and "population" in self.states[timestep]:
-                return [(timestep, self.states[timestep]["population"])]
-            else:
-                return []
-        else:
-            result = []
-            for t, state in self.states.items():
-                if "population" in state:
-                    result.append((t, state["population"]))
-            return sorted(result, key=lambda x: x[0])
+    def load_all_producers(self, timestep=None):
+        result = []
+        for t, state in self.states.items():
+            if "producers" in state:
+                result.append((t, state["producers"]))
+        return sorted(result, key=lambda x: x[0])
     
-    def load_all_lineage_data(self, timestep=None):
-        if timestep is not None:
-            if timestep in self.states and "lineage" in self.states[timestep]:
-                return [(timestep, self.states[timestep]["lineage"])]
-            else:
-                return []
-        else:
-            result = []
-            for t, state in self.states.items():
-                if "lineage" in state:
-                    result.append((t, state["lineage"]))
-            return sorted(result, key=lambda x: x[0])
+    def load_all_consumers(self, timestep=None):
+        result = []
+        for t, state in self.states.items():
+            if "consumers" in state:
+                result.append((t, state["consumers"]))
+        return sorted(result, key=lambda x: x[0])
     
     def load_all_debug_logs(self, timestep=None):
-        if timestep is not None:
-            if timestep in self.states and "debug_logs" in self.states[timestep]:
-                return [(timestep, self.states[timestep]["debug_logs"])]
-            else:
-                return []
-        else:
-            result = []
-            for t, state in self.states.items():
-                if "debug_logs" in state:
-                    result.append((t, state["debug_logs"]))
-            return sorted(result, key=lambda x: x[0])
+        result = []
+        for t, state in self.states.items():
+            if "debug_logs" in state:
+                result.append((t, state["debug_logs"]))
+        return sorted(result, key=lambda x: x[0])
     
     # --- Persistence Functions ---
     def flush_to_longterm(self, storage):
         """
         Write all in‑memory simulation states to long‑term storage.
-        If no states are stored, create an empty file.
+        If no states are stored, delegate empty file creation to the storage.
         """
         if not self.states:
             storage.create_empty_file()
             return
         for t, state in self.states.items():
             board = state.get("board")
-            population_data = state.get("population")
-            species_names = state.get("species_names")
-            lineage = state.get("lineage")
+            producers = state.get("producers", [])
+            consumers = state.get("consumers", [])
             debug_logs = state.get("debug_logs")
-            # Ensure debug_logs (and optionally others) are not None.
             if debug_logs is None:
                 debug_logs = []
-            organisms = self._reconstruct_organisms(population_data, species_names, lineage)
-            storage.save_simulation_state(t, board, organisms, debug_logs)        # Optionally, clear the in-memory store:
-        # self.states.clear()
-    
-    def _reconstruct_organisms(self, population_data, species_names, lineage):
-        organisms = []
-        if population_data is None or species_names is None or lineage is None:
-            return organisms
-        positions = population_data.get("positions", [])
-        energies = population_data.get("energy", [])
-        speeds = population_data.get("speed", [])
-        generations = population_data.get("generation", [])
-        org_ids = lineage.get("organism_ids", [])
-        parent_ids = lineage.get("parent_ids", [])
-        for i in range(len(positions)):
-            org = DummyOrganism(
-                x=positions[i][0],
-                y=positions[i][1],
-                energy=energies[i],
-                speed=speeds[i],
-                generation=generations[i],
-                species=species_names[i],
-                id=org_ids[i],
-                parent_id=parent_ids[i] if parent_ids[i] != "None" else None
-            )
-            organisms.append(org)
-        return organisms
+            storage.save_simulation_state(t, board, producers, consumers, debug_logs)
     
     def load_from_longterm(self, storage, timestep):
         """
-        Load a simulation state for a given timestep from long‑term storage into memory.
+        Load the simulation state for a given timestep from long‑term storage into memory.
         Returns the loaded state as a dict, or None if not found.
         """
         state_list = storage.load_simulation_state(timestep)
         if state_list:
             t, state_tuple = state_list[0]
+            # Expect state_tuple to be (board, producers, consumers, debug_logs)
             state = {
                 "board": state_tuple[0],
-                "population": state_tuple[1],
-                "species_names": state_tuple[2],
-                "lineage": state_tuple[3],
-                "debug_logs": state_tuple[4]
+                "producers": state_tuple[1],
+                "consumers": state_tuple[2],
+                "debug_logs": state_tuple[3]
             }
             self.states[t] = state
             self.current_timestep = t
             self.update_mode_based_on_state()
             return state
         return None
-    
+
     # --- Mode and Timestep Helpers ---
     def is_last_stored_step(self):
         if not self.states:
@@ -316,3 +186,28 @@ class MemoryResidentSimulationStore:
     
     def is_live(self):
         return self.mode == "live"
+
+    def add_consumer(self, timestep, consumer):
+        state = self.states.setdefault(timestep, {})
+        consumers = state.setdefault("consumers", [])
+        consumers.append(consumer)
+        self.current_timestep = timestep
+        self.update_mode_based_on_state()
+
+    def remove_consumer(self, timestep, index):
+        state = self.states.get(timestep)
+        if state is None or "consumers" not in state:
+            raise ValueError("No state or consumers data found for timestep %s" % timestep)
+        state["consumers"].pop(index)
+
+    def update_consumer_position(self, timestep, index, new_position):
+        state = self.states.get(timestep)
+        if state is None or "consumers" not in state:
+            raise ValueError("No state or consumers data found for timestep %s" % timestep)
+        consumer = state["consumers"][index]
+        if hasattr(consumer, "x"):
+            consumer.x = new_position[0]
+            consumer.y = new_position[1]
+        else:
+            consumer["x"] = new_position[0]
+            consumer["y"] = new_position[1]
