@@ -25,6 +25,11 @@ class HDF5Storage:
             ),
         }
 
+
+    def create_empty_file(self):
+        with h5py.File(self.filename, "w") as f:
+            pass
+
     # ---------------------------
     # Saving Functions (unchanged)
     # ---------------------------
