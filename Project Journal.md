@@ -188,7 +188,32 @@ Final thoughts, I think this was a good warm-up sprint. I didn't get as much don
 ... *(repeat section from Sprint 1)*
 
 ### Colton Woodruff
-... *(repeat section from Sprint 1)*
+
+#### AI Tools Used
+*   Github Copilot (with Gemini 2.0 Flash and Github Agent - Claude 3.5 Sonnet)
+
+#### Tasks and Features
+*   Implemented a nutrient system between producers and consumers using Github Agent. This involved creating a 2D array to represent nutrient levels, modifying the Producer and Consumer classes to interact with the nutrient environment, and implementing nutrient diffusion and decay.
+*   Reviewed and understood a pull request submitted by Caleb using Github Copilot (on Github.com). This helped understand the changes made to the core simulation loop and how they impacted performance.
+*   Using Github Agent, further addressed balancing of the simulation by updating organism parameters and start state. Further work is needed, but the balance is drastically improved.
+
+#### Prompts and Outputs
+*   **Idea Generation Prompts (Github Copilot with Gemini 2.0 Flash):** Used Gemini 2.0 Flash to brainstorm different approaches to implementing the nutrient system, focusing on balancing realism with computational efficiency. Examples included prompts like "What are some simple ways to add a feedback loop between producers and consumers?" and "How can I make producers and consumers interact with a shared nutrient resource?".
+*   **Code Implementation Prompts (Github Agent - Claude 3.5 Sonnet):** Primarily used Github Agent for code implementation, specifically using the Claude 3.5 Sonnet model. To create the prompt, I first talked through the feature with Gemini 2.0 Flash, then asked it to create a detailed prompt to pass to Claude 3.5 Sonnet on Github Agent. The resulting prompt was perfect and gave Claude a specific set of guidelines to work with. The main prompt was: "Implement a nutrient system where producers consume nutrients from the environment, consumers release nutrients upon death, and nutrients diffuse to neighboring cells and decay over time." Gemini then provided a much longer prompt to pass to Github Agent, which then iteratively assessed the codebase, made changes to the Producer and Consumer classes, and added the necessary calls to the simulation loop. The agent prompted for approval after each iteration, allowing for fine-grained control. GPT-4o was also tested, but Claude 3.5 Sonnet provided better results.
+*   **Pull Request Explanation (Github Copilot on Github.com):** Used Github Copilot on the Github website to break down and explain Caleb's pull request. Specific questions included: "Explain the changes in this pull request" and "Describe how each new addition interacts". The tool provided a clear summary of the changes and highlighted potential areas for optimization.
+
+#### Reflections on AI Quality
+*   Github Agent (Claude 3.5 Sonnet) proved surprisingly effective for code implementation, especially for the larger task of implementing the nutrient system. The iterative process and built-in testing helped ensure code quality and reduced the need for manual debugging. The ability to approve changes line by line provided fine-grained control and allowed for experimentation with different approaches. However, it sometimes required careful prompt engineering to guide the agent towards the desired outcome.
+*   Github Copilot (on Github.com) provided a valuable overview of Caleb's pull request, but it sometimes lacked the depth of understanding that a manual code review would provide. It was most useful for quickly identifying the key changes and understanding their purpose.
+
+#### AI Tool Integration
+*   This sprint focused on leveraging Github Copilot's new features. Gemini 2.0 Flash was used for initial brainstorming and high-level design, while Github Agent (Claude 3.5 Sonnet) handled the bulk of the code implementation. Github Copilot (on Github.com) was used for code review and understanding. This workflow allowed for leveraging the strengths of each tool: Gemini 2.0 Flash for creative problem-solving, Github Agent (Claude 3.5 Sonnet) for efficient code generation, and Github Copilot (on Github.com) for quick code review.
+
+#### Lessons Learned
+*   **Github Agent (with Claude 3.5 Sonnet) is a Powerful Code Generation Tool:** The iterative approach and automated testing of Github Agent significantly improved code quality and reduced the need for manual debugging. However, it requires careful prompt engineering and close monitoring to ensure that it produces the desired results.
+*   **Model Selection Matters for Different Tasks:** Gemini 2.0 Flash was more effective for brainstorming and high-level design, while Github Agent (Claude 3.5 Sonnet) was better suited for code implementation. Choosing the right model for the task at hand is crucial for maximizing productivity.
+*   **AI-Assisted Code Review is a Useful Starting Point:** Using Github Copilot to explain pull requests can significantly speed up the code review process and provide a useful overview of the changes. However, it should not replace a thorough manual code review.
+*   **Iterative Prompting is Key to Success with Github Agent:** Starting with a broad prompt and then iteratively refining it based on the agent's output is an effective strategy for achieving complex goals. This allows for guiding the agent towards the desired outcome while still leveraging its ability to automate code generation.
 
 ### Tycin Wood
 ... *(repeat section from Sprint 1)*
