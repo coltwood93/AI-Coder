@@ -9,14 +9,15 @@ Two-Species A-Life Simulation with immediate producer removal when eaten:
  - Interactive time-travel (pause, step) + CSV logging.
  - Uses DEAP for behind-the-scenes gene creation/mutation.
  - **Now ensures one cell cannot hold multiple producers!**
+ - **Added nutrient model with diffusion and decay**
 """
 
 import sys
 import random
 import copy
-import math
 import csv
 import pygame
+import numpy as np  # Moved numpy import here
 
 # === DEAP IMPORTS ===
 from deap import base, creator, tools
@@ -27,37 +28,39 @@ from deap import base, creator, tools
 GRID_WIDTH = 20
 GRID_HEIGHT = 20
 CELL_SIZE = 20
-DISPLAY_WIDTH = GRID_WIDTH * CELL_SIZE
+STATS_PANEL_WIDTH = 200  # Width of the stats panel
+DISPLAY_WIDTH = GRID_WIDTH * CELL_SIZE + STATS_PANEL_WIDTH
 DISPLAY_HEIGHT = GRID_HEIGHT * CELL_SIZE
 
 # Producer
-INITIAL_PRODUCERS = 15
-PRODUCER_ENERGY_GAIN = 0.3
+INITIAL_PRODUCERS = 25  # Increased from 15 to provide more initial food
+PRODUCER_ENERGY_GAIN = 0.6  # Increased from 0.4 to help sustain higher seed rate
 PRODUCER_MAX_ENERGY = 30
 PRODUCER_SEED_COST = 2
-PRODUCER_SEED_PROB = 0.2
-PRODUCER_INIT_ENERGY_RANGE = (5, 15)
+PRODUCER_SEED_PROB = 0.25  # Increased from 0.15 to help producers spread more
+PRODUCER_INIT_ENERGY_RANGE = (8, 15)  # Increased minimum energy
 NO_SEED_UNDER_CONSUMER = True  # If True, won't seed under a consumer
 
 # Consumer
-INITIAL_CONSUMERS = 15
-CONSUMER_INIT_ENERGY_RANGE = (5, 25)
-BASE_LIFE_COST = 1.5
-MOVE_COST_FACTOR = 0.15
-EAT_GAIN = 5
-CONSUMER_REPRO_THRESHOLD = 20
+INITIAL_CONSUMERS = 8
+CONSUMER_INIT_ENERGY_RANGE = (15, 25)
+BASE_LIFE_COST = 1.5  # Restored from 2.0
+MOVE_COST_FACTOR = 0.15  # Restored from 0.25
+EAT_GAIN = 4
+CONSUMER_REPRO_THRESHOLD = 45
+CRITICAL_ENERGY = 6  # Restored from 8
 
 # Genes: [speed, metabolism, vision]
 MUTATION_RATE = 0.1
-SPEED_RANGE = (0, 5)
-METABOLISM_RANGE = (0.5, 2.0)
-VISION_RANGE = (1, 3)
+SPEED_RANGE = (1, 4)
+METABOLISM_RANGE = (0.8, 1.2)  # Restored range
+VISION_RANGE = (1, 4)
 
 # Force random movement if low energy + no plant
-CRITICAL_ENERGY = 8
+CRITICAL_ENERGY = 6
 
 # Optional discovery bonus
-DISCOVERY_BONUS = 0.2
+DISCOVERY_BONUS = 0.3  # Restored from 0.2
 TRACK_CELL_HISTORY_LEN = 20
 
 MAX_TIMESTEPS = 200
@@ -69,11 +72,16 @@ PAUSE_KEY = pygame.K_p
 STEP_BACK_KEY = pygame.K_LEFT
 STEP_FORWARD_KEY = pygame.K_RIGHT
 
+# Nutrient Parameters
+INITIAL_NUTRIENT_LEVEL = 0.5
+NUTRIENT_DIFFUSION_RATE = 0.1
+NUTRIENT_DECAY_RATE = 0.01
+PRODUCER_NUTRIENT_CONSUMPTION = 0.1
+CONSUMER_NUTRIENT_RELEASE = 0.05  # Restored from 0.15
 
 # =====================
 # DEAP SETUP
 # =====================
-
 creator.create("FitnessMax", base.Fitness, weights=(1.0,))
 creator.create("Individual", list, fitness=creator.FitnessMax)
 toolbox = base.Toolbox()
@@ -113,7 +121,9 @@ def custom_mutate(ind):
 
 
 # Register creation + mutation
-toolbox.register("individual", tools.initIterate, creator.Individual, create_random_genome)
+toolbox.register(
+    "individual", tools.initIterate, creator.Individual, create_random_genome
+)
 toolbox.register("mutate", custom_mutate)
 
 
@@ -122,9 +132,10 @@ toolbox.register("mutate", custom_mutate)
 # =====================
 class Producer:
     """
-    Gains energy passively, can seed, immediately removed if eaten.
+    Gains energy from nutrients, can seed, immediately removed if eaten.
     Ensures a single producer per cell (no duplicates).
     """
+
     next_id = 0
 
     def __init__(self, x, y, energy=10):
@@ -134,9 +145,12 @@ class Producer:
         self.id = Producer.next_id
         Producer.next_id += 1
 
-    def update(self, producers_list, consumers_list):
-        # Gains some energy
-        self.energy += PRODUCER_ENERGY_GAIN
+    def update(self, producers_list, consumers_list, environment):
+        # Consume nutrients and gain energy
+        nutrient_taken = min(environment[self.x, self.y], PRODUCER_NUTRIENT_CONSUMPTION)
+        self.energy += nutrient_taken * PRODUCER_ENERGY_GAIN
+        environment[self.x, self.y] -= nutrient_taken
+
         if self.energy > PRODUCER_MAX_ENERGY:
             self.energy = PRODUCER_MAX_ENERGY
 
@@ -151,7 +165,7 @@ class Producer:
                 if occupant_consumer:
                     return
 
-            # NEW: Check if there's already a producer in (nx, ny)
+            # Check if there's already a producer in (nx, ny)
             occupant_producer = any(p.x == nx and p.y == ny for p in producers_list)
             if occupant_producer:
                 return
@@ -162,8 +176,7 @@ class Producer:
             producers_list.append(baby)
 
     def random_adjacent(self):
-        dirs = [(-1, 0), (1, 0), (0, -1), (0, 1),
-                (-1, -1), (1, 1), (-1, 1), (1, -1)]
+        dirs = [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, 1), (-1, 1), (1, -1)]
         dx, dy = random.choice(dirs)
         nx = (self.x + dx) % GRID_WIDTH
         ny = (self.y + dy) % GRID_HEIGHT
@@ -183,7 +196,9 @@ class Consumer:
     - One occupant per cell for consumers (no stacking).
     - If no plant in sight & energy<CRITICAL_ENERGY => forced random moves.
     - Labels in black text => self.id
+    - Releases nutrients upon death.
     """
+
     next_id = 0
 
     def __init__(self, x, y, energy=10, genes=None, generation=0):
@@ -191,7 +206,6 @@ class Consumer:
         self.y = y
         self.energy = energy
         self.generation = generation
-
         self.id = Consumer.next_id
         Consumer.next_id += 1
 
@@ -216,10 +230,29 @@ class Consumer:
     def vision(self):
         return int(self.genes[2])
 
-    def update(self, producers_list, consumers_list):
-        # baseline cost
-        self.energy -= BASE_LIFE_COST
+    def count_nearby_consumers(self, consumers_list, radius=2):
+        count = 0
+        for c in consumers_list:
+            if c is not self:
+                dx = abs(c.x - self.x)
+                dy = abs(c.y - self.y)
+                if dx <= radius and dy <= radius:
+                    count += 1
+        return count
+
+    def release_nutrients(self, environment):
+        environment[self.x, self.y] += CONSUMER_NUTRIENT_RELEASE
+
+    def update(self, producers_list, consumers_list, environment):
+        # Competition penalty based on nearby consumers
+        nearby = self.count_nearby_consumers(consumers_list)
+        competition_cost = nearby * 0.1
+
+        # baseline cost (scales with speed and competition)
+        self.energy -= BASE_LIFE_COST + (self.speed * 0.2) + competition_cost
+
         if self.energy <= 0:
+            self.release_nutrients(environment)
             return
 
         direction = self.find_nearest_producer(producers_list)
@@ -227,8 +260,11 @@ class Consumer:
             steps = self.speed
             for _ in range(steps):
                 self.move_towards(direction, consumers_list)
-                self.energy -= (MOVE_COST_FACTOR * self.metabolism)
+                self.energy -= (
+                    MOVE_COST_FACTOR * self.metabolism * (1 + self.speed * 0.1)
+                )
                 if self.energy <= 0:
+                    self.release_nutrients(environment)
                     return
                 if self.check_and_eat_immediate(producers_list):
                     break
@@ -238,16 +274,18 @@ class Consumer:
                 forced_steps = self.speed if self.speed > 0 else 1
                 for _ in range(forced_steps):
                     self.move_random(consumers_list)
-                    self.energy -= (MOVE_COST_FACTOR * self.metabolism)
+                    self.energy -= MOVE_COST_FACTOR * self.metabolism
                     if self.energy <= 0:
+                        self.release_nutrients(environment)
                         return
                     if self.check_and_eat_immediate(producers_list):
                         break
             else:
                 # minimal random move
                 self.move_random(consumers_list)
-                self.energy -= (MOVE_COST_FACTOR * self.metabolism)
+                self.energy -= MOVE_COST_FACTOR * self.metabolism
                 if self.energy <= 0:
+                    self.release_nutrients(environment)
                     return
                 self.check_and_eat_immediate(producers_list)
 
@@ -333,8 +371,8 @@ class Consumer:
         return False
 
     def reproduce(self, consumers_list):
-        child_en = self.energy // 2
-        self.energy -= child_en
+        child_en = self.energy / 2
+        self.energy /= 2
         baby_genes = copy.deepcopy(self.genes)
 
         # Use DEAP's mutation operator
@@ -351,24 +389,68 @@ class Consumer:
 
 
 # ============= HISTORY/SNAPSHOT =============
+def update_environment(environment):
+    """Handles nutrient diffusion and decay across the environment."""
+    # Create a copy for diffusion calculations
+    new_env = environment.copy()
+
+    # Diffusion
+    for x in range(GRID_WIDTH):
+        for y in range(GRID_HEIGHT):
+            # Get neighbor coordinates with wraparound
+            up = (x, (y - 1) % GRID_HEIGHT)
+            down = (x, (y + 1) % GRID_HEIGHT)
+            left = ((x - 1) % GRID_WIDTH, y)
+            right = ((x + 1) % GRID_WIDTH, y)
+
+            # Calculate average with neighbors
+            neighbors_avg = (
+                environment[up]
+                + environment[down]
+                + environment[left]
+                + environment[right]
+            ) / 4
+
+            # Apply diffusion
+            diff = (neighbors_avg - environment[x, y]) * NUTRIENT_DIFFUSION_RATE
+            new_env[x, y] += diff
+
+    # Apply decay
+    new_env *= 1 - NUTRIENT_DECAY_RATE
+
+    # Update the environment
+    environment[:] = new_env
+
+
 class SimulationState:
-    def __init__(self, t, producers, consumers):
+    def __init__(self, t, producers, consumers, environment):
         self.t = t
         # deep copy
         self.producers = copy.deepcopy(producers)
         self.consumers = copy.deepcopy(consumers)
+        self.environment = copy.deepcopy(environment)
+        self.highest_generation = 0  # Track highest generation in each state
 
 
-def store_state(history, t, producers, consumers):
-    st = SimulationState(t, producers, consumers)
+def store_state(history, t, producers, consumers, environment):
+    st = SimulationState(t, producers, consumers, environment)
+    # Update highest generation reached
+    if consumers:
+        st.highest_generation = max(
+            st.highest_generation, max(c.generation for c in consumers)
+        )
+    # Inherit previous highest generation if it's higher
+    if history and history[-1].highest_generation > st.highest_generation:
+        st.highest_generation = history[-1].highest_generation
     history.append(st)
 
 
-def load_state_into_sim(state, producers, consumers):
+def load_state_into_sim(state, producers, consumers, environment):
     producers.clear()
     consumers.clear()
     producers.extend(copy.deepcopy(state.producers))
     consumers.extend(copy.deepcopy(state.consumers))
+    environment[:] = copy.deepcopy(state.environment)
 
 
 # ============= STATS =============
@@ -377,15 +459,18 @@ def average_speed(cons):
         return 0
     return sum(c.speed for c in cons) / len(cons)
 
+
 def average_generation(cons):
     if not cons:
         return 0
     return sum(c.generation for c in cons) / len(cons)
 
+
 def average_metabolism(cons):
     if not cons:
         return 0
     return sum(c.metabolism for c in cons) / len(cons)
+
 
 def average_vision(cons):
     if not cons:
@@ -397,15 +482,28 @@ def average_vision(cons):
 def run_simulation_interactive():
     pygame.init()
     screen = pygame.display.set_mode((DISPLAY_WIDTH, DISPLAY_HEIGHT))
-    pygame.display.set_caption("Immediate removal of eaten producers + occupant limit")
+    pygame.display.set_caption("A-Life Simulation")
     clock = pygame.time.Clock()
-    font = pygame.font.SysFont(None, 24)
+    stats_font = pygame.font.SysFont(None, 20)
     label_font = pygame.font.SysFont(None, 16)
 
     csvfilename = "results_interactive.csv"
     csvfile = open(csvfilename, "w", newline="")
     writer = csv.writer(csvfile)
-    writer.writerow(["Timestep", "Producers", "Consumers", "AvgSpeed", "AvgGen", "AvgMetab", "AvgVision"])
+    writer.writerow(
+        [
+            "Timestep",
+            "Producers",
+            "Consumers",
+            "AvgSpeed",
+            "AvgGen",
+            "AvgMetab",
+            "AvgVision",
+        ]
+    )
+
+    # Initialize nutrient environment
+    environment = np.full((GRID_WIDTH, GRID_HEIGHT), INITIAL_NUTRIENT_LEVEL)
 
     # init producers
     producers = []
@@ -414,10 +512,8 @@ def run_simulation_interactive():
         py = random.randint(0, GRID_HEIGHT - 1)
         pen = random.randint(*PRODUCER_INIT_ENERGY_RANGE)
 
-        # Also avoid placing multiple producers in the same cell at start if desired.
-        # For large spawns, you might want a more robust approach, but here's a simple check:
         if any(p.x == px and p.y == py for p in producers):
-            continue  # skip to next
+            continue
         producers.append(Producer(px, py, pen))
 
     # init consumers
@@ -433,34 +529,43 @@ def run_simulation_interactive():
     current_step = 0
     is_paused = False
 
-    store_state(history, current_step, producers, consumers)
+    store_state(history, current_step, producers, consumers, environment)
 
     def log_stats(t):
-        np = len(producers)
-        nc = len(consumers)
+        num_producers = len(producers)
+        num_consumers = len(consumers)
         sp = average_speed(consumers)
         gn = average_generation(consumers)
         mb = average_metabolism(consumers)
         vs = average_vision(consumers)
-        writer.writerow([t, np, nc, sp, gn, mb, vs])
-        print(f"Timestep {t}: P={np}, C={nc}, Sp={sp:.2f}, Gen={gn:.2f}, Met={mb:.2f}, Vis={vs:.2f}")
+        writer.writerow([t, num_producers, num_consumers, sp, gn, mb, vs])
+        print(
+            f"Timestep {t}: P={num_producers}, C={num_consumers}, Sp={sp:.2f}, Gen={gn:.2f}, Met={mb:.2f}, Vis={vs:.2f}"
+        )
 
     def do_simulation_step(t):
+        # Stop if both populations are extinct
+        if not producers and not consumers:
+            return t
+
         # 1) Update producers
         for p in producers:
-            p.update(producers, consumers)
+            p.update(producers, consumers, environment)
 
         # 2) Update consumers
         for c in consumers:
-            c.update(producers, consumers)
+            c.update(producers, consumers, environment)
 
         # remove dead consumers
         alive_cons = [c for c in consumers if not c.is_dead()]
         consumers.clear()
         consumers.extend(alive_cons)
 
+        # 3) Update environment
+        update_environment(environment)
+
         t += 1
-        store_state(history, t, producers, consumers)
+        store_state(history, t, producers, consumers, environment)
         log_stats(t)
         return t
 
@@ -470,7 +575,11 @@ def run_simulation_interactive():
     while True:
         if not is_paused and current_step == len(history) - 1:
             if current_step < MAX_TIMESTEPS:
-                current_step = do_simulation_step(current_step)
+                if producers or consumers:  # Only continue if either population exists
+                    current_step = do_simulation_step(current_step)
+                else:
+                    is_paused = True  # Auto-pause when both populations are extinct
+                    print("Simulation ended: All populations extinct")
             else:
                 is_paused = True
 
@@ -485,30 +594,56 @@ def run_simulation_interactive():
                 elif event.key == STEP_BACK_KEY:
                     if is_paused and current_step > 0:
                         current_step -= 1
-                        load_state_into_sim(history[current_step], producers, consumers)
+                        load_state_into_sim(
+                            history[current_step], producers, consumers, environment
+                        )
                 elif event.key == STEP_FORWARD_KEY:
                     if is_paused:
                         if current_step < len(history) - 1:
                             current_step += 1
-                            load_state_into_sim(history[current_step], producers, consumers)
+                            load_state_into_sim(
+                                history[current_step], producers, consumers, environment
+                            )
                         else:
                             if current_step < MAX_TIMESTEPS:
                                 current_step = do_simulation_step(current_step)
 
         # Re-draw the current state
         st = history[current_step]
-        load_state_into_sim(st, producers, consumers)
+        load_state_into_sim(st, producers, consumers, environment)
 
         screen.fill((0, 0, 0))
+
+        # Draw simulation grid area
+        pygame.draw.rect(
+            screen,
+            (20, 20, 20),
+            (0, 0, GRID_WIDTH * CELL_SIZE, GRID_HEIGHT * CELL_SIZE),
+        )
+
+        # Draw nutrient levels
+        for x in range(GRID_WIDTH):
+            for y in range(GRID_HEIGHT):
+                nutrient = environment[x, y]
+                # Scale nutrient level to blue color intensity (0-255)
+                blue_intensity = int(max(0, min(255, nutrient * 255)))
+                rect = pygame.Rect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+                pygame.draw.rect(screen, (0, 0, blue_intensity), rect)
+
+        # Draw stats panel background
+        stats_panel = pygame.Surface((STATS_PANEL_WIDTH, DISPLAY_HEIGHT))
+        stats_panel.fill((30, 30, 30))
+        screen.blit(stats_panel, (GRID_WIDTH * CELL_SIZE, 0))
 
         # draw producers
         for p in producers:
             px = p.x * CELL_SIZE
             py = p.y * CELL_SIZE
             pygame.draw.circle(
-                screen, (0, 255, 0),
+                screen,
+                (0, 255, 0),
                 (px + CELL_SIZE // 2, py + CELL_SIZE // 2),
-                CELL_SIZE // 2
+                CELL_SIZE // 2,
             )
 
         # draw consumers
@@ -516,9 +651,10 @@ def run_simulation_interactive():
             cx = c.x * CELL_SIZE
             cy = c.y * CELL_SIZE
             pygame.draw.circle(
-                screen, (255, 255, 255),
+                screen,
+                (255, 255, 255),
                 (cx + CELL_SIZE // 2, cy + CELL_SIZE // 2),
-                CELL_SIZE // 2
+                CELL_SIZE // 2,
             )
 
             label_str = str(c.id)
@@ -526,20 +662,54 @@ def run_simulation_interactive():
             r = label_surf.get_rect(center=(cx + CELL_SIZE // 2, cy + CELL_SIZE // 2))
             screen.blit(label_surf, r)
 
-        # overhead stats
-        np = len(producers)
-        nc = len(consumers)
+        # Stats calculations
+        num_producers = len(producers)
+        num_consumers = len(consumers)
         sp = average_speed(consumers)
         gn = average_generation(consumers)
         mb = average_metabolism(consumers)
         vs = average_vision(consumers)
-        status = "PAUSED" if is_paused else "RUN"
-        info_str = (
-            f"t={current_step} | P={np} | C={nc} | "
-            f"Sp={sp:.2f} | G={gn:.2f} | Met={mb:.2f} | Vis={vs:.2f} | {status}"
-        )
-        text_surf = font.render(info_str, True, (255, 255, 255))
-        screen.blit(text_surf, (10, 10))
+        current_state = history[current_step]
+        max_gen = current_state.highest_generation
+
+        # Determine simulation status
+        if not producers and not consumers:
+            status = "EXTINCT"
+            status_color = (255, 0, 0)  # Red for extinction
+        elif is_paused:
+            status = "PAUSED"
+            status_color = (255, 255, 0)  # Yellow for paused
+        else:
+            status = "RUNNING"
+            status_color = (0, 255, 0)  # Green for running
+
+        # Draw stats panel content
+        stats_x = GRID_WIDTH * CELL_SIZE + 10
+        stats_y = 10
+        line_height = 25
+
+        def draw_stat(label, value, y_pos, color=(200, 200, 200)):
+            text = f"{label}: {value}"
+            surf = stats_font.render(text, True, color)
+            screen.blit(surf, (stats_x, y_pos))
+            return y_pos + line_height
+
+        current_y = stats_y
+        current_y = draw_stat("Timestep", current_step, current_y)
+        current_y = draw_stat("Status", status, current_y, status_color)
+        current_y += line_height / 2  # Spacing
+
+        current_y = draw_stat("Producers", num_producers, current_y, (0, 255, 0))
+        current_y = draw_stat("Consumers", num_consumers, current_y, (255, 255, 255))
+        current_y += line_height / 2  # Spacing
+
+        current_y = draw_stat("Max Generation", max_gen, current_y, (255, 200, 0))
+        current_y = draw_stat("Avg Generation", f"{gn:.1f}", current_y)
+        current_y += line_height / 2  # Spacing
+
+        current_y = draw_stat("Avg Speed", f"{sp:.1f}", current_y)
+        current_y = draw_stat("Avg Metabolism", f"{mb:.2f}", current_y)
+        current_y = draw_stat("Avg Vision", f"{vs:.1f}", current_y)
 
         pygame.display.flip()
         clock.tick(FPS)
