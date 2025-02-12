@@ -421,7 +421,6 @@ def run_simulation_interactive():
     screen = pygame.display.set_mode((DISPLAY_WIDTH, DISPLAY_HEIGHT))
     pygame.display.set_caption("A-Life Simulation")
     clock = pygame.time.Clock()
-    font = pygame.font.SysFont(None, 24)
     stats_font = pygame.font.SysFont(None, 20)
     label_font = pygame.font.SysFont(None, 16)
 
