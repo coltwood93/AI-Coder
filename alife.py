@@ -517,6 +517,10 @@ def run_simulation_interactive():
         print(f"Timestep {t}: P={num_producers}, C={num_consumers}, Sp={sp:.2f}, Gen={gn:.2f}, Met={mb:.2f}, Vis={vs:.2f}")
 
     def do_simulation_step(t):
+        # Stop if both populations are extinct
+        if not producers and not consumers:
+            return t
+
         # 1) Update producers
         for p in producers:
             p.update(producers, consumers, environment)
@@ -544,7 +548,11 @@ def run_simulation_interactive():
     while True:
         if not is_paused and current_step == len(history) - 1:
             if current_step < MAX_TIMESTEPS:
-                current_step = do_simulation_step(current_step)
+                if producers or consumers:  # Only continue if either population exists
+                    current_step = do_simulation_step(current_step)
+                else:
+                    is_paused = True  # Auto-pause when both populations are extinct
+                    print("Simulation ended: All populations extinct")
             else:
                 is_paused = True
 
@@ -626,7 +634,17 @@ def run_simulation_interactive():
         vs = average_vision(consumers)
         current_state = history[current_step]
         max_gen = current_state.highest_generation
-        status = "PAUSED" if is_paused else "RUNNING"
+        
+        # Determine simulation status
+        if not producers and not consumers:
+            status = "EXTINCT"
+            status_color = (255, 0, 0)  # Red for extinction
+        elif is_paused:
+            status = "PAUSED"
+            status_color = (255, 255, 0)  # Yellow for paused
+        else:
+            status = "RUNNING"
+            status_color = (0, 255, 0)  # Green for running
 
         # Draw stats panel content
         stats_x = GRID_WIDTH * CELL_SIZE + 10
