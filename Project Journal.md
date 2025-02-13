@@ -216,8 +216,33 @@ Final thoughts, I think this was a good warm-up sprint. I didn't get as much don
 *   **Iterative Prompting is Key to Success with Github Agent:** Starting with a broad prompt and then iteratively refining it based on the agent's output is an effective strategy for achieving complex goals. This allows for guiding the agent towards the desired outcome while still leveraging its ability to automate code generation.
 
 ### Tycin Wood
-... *(repeat section from Sprint 1)*
 
+#### AI Tools Used
+*   Github Copilot (On github and while using VS Code)
+*   ChatGPT 4o, o1 and o3-mini-high
+
+#### Tasks and Features
+*   Implement in-memory volatile storage of data to act as middleware between the simulation and the long-term non-volatile storage using ChatGPT.
+*   Enhance the long-term storage capabilities to leave room for growth and implement changes to ensure smooth operation with in-memory storage using ChatGPT.
+*   Create unit tests for new storage capabilities using ChatGPT
+*   Integrate in-memory storage functions to replace original storage functionality using Copilot and ChatGPT.
+*   Understand and merge pull requests from teammates using Copilot.
+
+#### Prompts and Outputs
+*   **Prompt:** Prompt info
+
+#### Reflections on AI Quality
+*   I used Copilot more this time around, both for review pull requests from my teammates and in my IDE while trying to debug the smaller items that ChatGPT got too cumbersome for at a couple points. It really had a hard time with what indentation level to drop functions into and seem to be a little clueless about code I didn't highlight or was a ways from the cursor. The functions it made though were sound and I could see it being used to generate quick functions when you know how you want to transform inputs into what outputs consistently.
+* Continued to use ChatGPT since I had a lot of information plugged into it. I found the model choice to be important for the tasks I was doing, with o1 being able to do high quality analysis and handle large contexts while o3-mini-high got lost a few times on all the different items I was caring about which I don't suspect it was a context window issue since it seemed to overly focus on criteria I mentioned 10 prompts back but forget criteria I gave it 2 prompts back. With the main script, it was a lot more successful in having a working script everytime it gave me entire output while unit tests were a whole other story. I had it make me unit tests multiple times and with varying results. Some of the unit tests ended up having the problem with the test itself while others found actual bugs in the code. It seemed to be about a 50/50 split. It also had hilarious and severe problems counting. Asked it to make 9 more tests at 21 and I ended up with 26 then asked for 4 more and ended up with 25 and then making it count each test as it made it yielded 30. Most of the time. 
+
+#### AI Tool Integration
+*   This sprint I still leveraged ChatGPT a lot because I already have a project setup with it and needed continuity between the different pieces I have been working on and my teammates. I used a variety of models to figure out the differences between them and at one point ran out of prompts on what is considered the current best model so had to look elsewhere. I used copilot some within the github 
+
+#### Lessons Learned
+*   **Choose models carefully:** I found jumping around ChatGPTs models that I was getting subpar output for some aspects of development while others were fine on that same topic. 
+*   **Sessions can get bloated:** I had a single chat session, though not my only one, that ended up reaching ~77k tokens and had a wild ride with it.... TODO
+
+Final thoughts, 
 
 ## Sprint 3: Optimization and Challenges
 *(Example Sprint Title - this should be updated for each sprint)*
