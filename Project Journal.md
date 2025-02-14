@@ -182,10 +182,27 @@ Final thoughts, I think this was a good warm-up sprint. I didn't get as much don
 
 
 ## Sprint 2: Simulation and Visual Elements
-*(Example Sprint Title - this should be updated for each sprint)*
+**
 
 ### Caleb Ingram
-... *(repeat section from Sprint 1)*
+#### AI Tools Used
+*   ChatGPT 1o
+#### Tasks and Features
+*   Introduced visual UI into the simulation
+*   Made dynamics of producers and consumers more realistic
+#### Prompts and Outputs
+*   Prompt #1: How about this: If a consumer's energy is running low (i.e. reaches some threshold) and there is no food in sight (with a reasonably shallow field of vision) then they must move? And once they eat a plant, the plant will disappear but will realistically regenerate (i.e. not immediately, but a seed will likely land and germinate). Please give the full code for that version of the program
+*   Response #1 (paraphrased): Here is a single python file that addresses your concern... Here's a list of your concerns... [insert python] Here's why this python file addresses the aforementioned concerns. [insert summary of changes]
+*   Prompt #2: I've pasted the results I'm getting. The consumer population explodes but they're still camping in one spot. A handful of spots end up each housing a great number of consumers: [insert results from running provided code]
+*   Response #2: Here is why you're getting these results... Here's how you can fix it... [insert python]. Here's why this python file addresses the aforementioned concerns... [insert summary of changes]
+*   Prompt #3: This is definitely more realistic, but certain consumers are still camping on a single spot without ever moving. Are you sure plants are being culled after the consumer lands on it?
+*   Response #3: Here are your concerns: [insert understanding of problem statement]... [insert Python file]. Here's why this python file addresses the aforementioned problem statement... [insert summary of changes]
+#### Reflections on AI Quality
+*   ChatGPT seems to be very good at understanding how to achieve a particular outcome. The trick is making sure it understands the desired outcome and how that differs from the current state of things.
+#### AI Tool Integration
+*   I continued to use the same chat within ChatGPT that I was using previously. It seemed to understand generic context but occasionally needs a reminder of what the ultimate goal is.
+#### Lessons Learned
+*   Human oversight is necessary to make progress. ChatGPT will always THINK it is solving the problem you provide because it doesn't always know WHY certain outputs are being created. For example, there was an incident wherein consumers (who were technically mobile) would camp out on a single producer because they could receive infinite energy and expend none. Therefore, they would reproduce and all the offspring would end up on that single square. I pointed this out to ChatGPT and prompted repeatedly for a fix; however, none of the code provided solved the problem. It responded as if it recognized the code that was causing the problematic behavior, but its solutions were ultimately insufficient. The problem was not solved until I pointed out in a single prompt that consumers can camp because producers aren't being culled AND that a producer should be culled once a consumer eats it. Only then did it provide me with code that solved the problem.
 
 ### Colton Woodruff
 
