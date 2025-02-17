@@ -2,17 +2,10 @@
 """
 Multi-Species A-Life Simulation (Producers, Herbivores, Carnivores)
 Improvements:
- 1) Herbivores and Carnivores get different energy gains from eating.
- 2) Stats displayed in columns on the right side of the window (one column per species).
- 3) Added realism via:
-    - Maximum lifespan for herbivores and carnivores.
-    - Reproduction cooldown (time steps between successful reproductions).
-    
-CONTROLS:
- - 'P': Pause/Unpause
- - Left Arrow: Rewind one timestep (when paused)
- - Right Arrow: Step forward one timestep (when paused)
- - Close Window or ESC: Quit
+ - Herbivores and Carnivores have distinct energy gains from eating.
+ - Stats displayed in columns on the right side of the window.
+ - Added realism (max lifespan, reproduction cooldown).
+ - **NEW**: Each turn, there's a small chance a new organism spawns on the border of the map.
 """
 
 import sys
@@ -45,14 +38,14 @@ PRODUCER_INIT_ENERGY_RANGE = (5, 15)
 # Herbivores
 INITIAL_HERBIVORES = 10
 HERBIVORE_INIT_ENERGY_RANGE = (5, 25)
-HERBIVORE_REPRO_THRESHOLD = 15
+HERBIVORE_REPRO_THRESHOLD = 17
 EAT_GAIN_HERBIVORE = 4  # Distinct from carnivores
 
 # Carnivores
-INITIAL_CARNIVORES = 5
-CARNIVORE_INIT_ENERGY_RANGE = (5, 25)
-CARNIVORE_REPRO_THRESHOLD = 18
-EAT_GAIN_CARNIVORE = 7  # Distinct from herbivores
+INITIAL_CARNIVORES = 6
+CARNIVORE_INIT_ENERGY_RANGE = (10, 30)
+CARNIVORE_REPRO_THRESHOLD = 17
+EAT_GAIN_CARNIVORE = 8  # Distinct from herbivores
 
 # Additional Realism
 MAX_LIFESPAN_HERBIVORE = 300
@@ -60,8 +53,8 @@ MAX_LIFESPAN_CARNIVORE = 250
 REPRODUCTION_COOLDOWN = 10
 
 # Energy & Movement
-BASE_LIFE_COST = 1.5
-MOVE_COST_FACTOR = 0.3
+BASE_LIFE_COST = 1.1
+MOVE_COST_FACTOR = 0.25
 
 # Genes & Mutation
 MUTATION_RATE = 0.1
@@ -70,7 +63,7 @@ METABOLISM_RANGE = (0.5, 2.0)
 VISION_RANGE = (1, 3)
 
 # Misc
-CRITICAL_ENERGY = 8     # Force random movement below this energy
+CRITICAL_ENERGY = 8  # Force random movement if below this
 DISCOVERY_BONUS = 0.2
 TRACK_CELL_HISTORY_LEN = 20
 MAX_TIMESTEPS = 200
@@ -82,10 +75,13 @@ PAUSE_KEY = pygame.K_p
 STEP_BACK_KEY = pygame.K_LEFT
 STEP_FORWARD_KEY = pygame.K_RIGHT
 
+# Chance each turn to spawn a new organism on the border
+SPAWN_CHANCE_PER_TURN = 0.2 # 15% probability
+
+
 ###########################################
 # DEAP SETUP
 ###########################################
-
 creator.create("FitnessMax", base.Fitness, weights=(1.0,))
 creator.create("Individual", list, fitness=creator.FitnessMax)
 
@@ -125,13 +121,12 @@ toolbox.register("individual", tools.initIterate, creator.Individual, create_ran
 toolbox.register("mutate", custom_mutate)
 
 ###########################################
-# CLASSES
+# ORGANISM CLASSES
 ###########################################
-
 class Producer:
     """
-    Gains energy passively, can seed new producers, 
-    removed if eaten by a herbivore (not by a carnivore).
+    Gains energy passively, can seed new producers,
+    removed if eaten by herbivores.
     """
     next_id = 0
 
@@ -171,13 +166,11 @@ class Producer:
 
 class Herbivore:
     """
-    Genome-based: [speed, metabolism, vision].
     Eats producers for EAT_GAIN_HERBIVORE.
-    Avoids carnivores if in vision range.
-    Single occupant rule among herbivores.
+    Runs away from carnivores.
     Additional realism:
-      - max_lifespan
-      - reproduction_cooldown
+      - lifespan
+      - reproduction cooldown
     """
     next_id = 0
 
@@ -187,10 +180,9 @@ class Herbivore:
         self.energy = energy
         self.generation = generation
 
-        # Additional realism
         self.age = 0
         self.max_lifespan = MAX_LIFESPAN_HERBIVORE
-        self.repro_cooldown_timer = 0  # how many steps left before can reproduce
+        self.repro_cooldown_timer = 0
 
         self.id = Herbivore.next_id
         Herbivore.next_id += 1
@@ -214,7 +206,7 @@ class Herbivore:
         return int(self.genes[2])
 
     def update(self, producers_list, herbivores_list, carnivores_list, environment):
-        # baseline cost
+        # baseline cost + aging
         self.energy -= BASE_LIFE_COST
         self.age += 1
         if self.repro_cooldown_timer > 0:
@@ -223,10 +215,10 @@ class Herbivore:
         if self.energy <= 0:
             return
         if self.age > self.max_lifespan:
-            self.energy = -1  # effectively dead
+            self.energy = -1
             return
 
-        # Check for carnivores in vision & run away if found
+        # run away from carnivores if any in sight
         c_dir = self.find_nearest_carnivore(carnivores_list)
         if c_dir:
             self.run_away_from(c_dir, herbivores_list)
@@ -259,7 +251,7 @@ class Herbivore:
                         return
                     self.check_and_eat_producer(producers_list)
 
-        # discovery bonus
+        # optional discovery bonus
         if DISCOVERY_BONUS > 0:
             if (self.x, self.y) not in self.recent_cells:
                 self.energy += DISCOVERY_BONUS
@@ -267,14 +259,14 @@ class Herbivore:
                 if len(self.recent_cells) > TRACK_CELL_HISTORY_LEN:
                     self.recent_cells.pop(0)
 
-        # reproduce if able and off cooldown
+        # reproduce
         if self.energy >= HERBIVORE_REPRO_THRESHOLD and self.repro_cooldown_timer == 0:
             self.reproduce(herbivores_list)
 
     def find_nearest_carnivore(self, carnivores_list):
         best_dist = self.vision + 1
-        best_dx, best_dy = 0, 0
         found = False
+        best_dx, best_dy = 0, 0
         for carn in carnivores_list:
             dx = carn.x - self.x
             dy = carn.y - self.y
@@ -298,8 +290,8 @@ class Herbivore:
 
     def find_nearest_producer(self, producers_list):
         best_dist = self.vision + 1
-        best_dx, best_dy = 0, 0
         found = False
+        best_dx, best_dy = 0, 0
         for p in producers_list:
             dx = p.x - self.x
             dy = p.y - self.y
@@ -316,7 +308,6 @@ class Herbivore:
         dx, dy = direction
         nx = (self.x + (1 if dx>0 else -1 if dx<0 else 0)) % GRID_WIDTH
         ny = (self.y + (1 if dy>0 else -1 if dy<0 else 0)) % GRID_HEIGHT
-
         if not self.cell_occupied(nx, ny, herbivores_list):
             self.x, self.y = nx, ny
         else:
@@ -364,10 +355,9 @@ class Herbivore:
         new_genome = list(cloned_genome)
 
         baby = Herbivore(self.x, self.y, child_energy, new_genome, self.generation+1)
-        baby.repro_cooldown_timer = REPRODUCTION_COOLDOWN  # Baby can't reproduce immediately
+        baby.repro_cooldown_timer = REPRODUCTION_COOLDOWN
         herbivores_list.append(baby)
 
-        # The parent should also go on cooldown
         self.repro_cooldown_timer = REPRODUCTION_COOLDOWN
 
     def is_dead(self):
@@ -376,12 +366,10 @@ class Herbivore:
 
 class Carnivore:
     """
-    Genome-based: [speed, metabolism, vision].
     Eats herbivores for EAT_GAIN_CARNIVORE.
-    Single occupant rule among carnivores only.
     Additional realism:
-      - max_lifespan
-      - reproduction_cooldown
+      - lifespan
+      - reproduction cooldown
     """
     next_id = 0
 
@@ -391,7 +379,6 @@ class Carnivore:
         self.energy = energy
         self.generation = generation
 
-        # Additional realism
         self.age = 0
         self.max_lifespan = MAX_LIFESPAN_CARNIVORE
         self.repro_cooldown_timer = 0
@@ -426,7 +413,7 @@ class Carnivore:
         if self.energy <= 0:
             return
         if self.age > self.max_lifespan:
-            self.energy = -1  # effectively dead
+            self.energy = -1
             return
 
         # attempt to find nearest herbivore
@@ -441,7 +428,6 @@ class Carnivore:
                     break
         else:
             if self.energy < CRITICAL_ENERGY:
-                # forced random moves
                 forced_steps = self.speed if self.speed > 0 else 1
                 for _ in range(forced_steps):
                     self.move_random(carnivores_list)
@@ -451,7 +437,6 @@ class Carnivore:
                     if self.check_and_eat_herbivore(herbivores_list):
                         break
             else:
-                # minimal random move
                 self.move_random(carnivores_list)
                 self.energy -= MOVE_COST_FACTOR * self.metabolism
                 if self.energy <= 0:
@@ -466,14 +451,14 @@ class Carnivore:
                 if len(self.recent_cells) > TRACK_CELL_HISTORY_LEN:
                     self.recent_cells.pop(0)
 
-        # reproduce if able and off cooldown
+        # reproduce
         if self.energy >= CARNIVORE_REPRO_THRESHOLD and self.repro_cooldown_timer == 0:
             self.reproduce(carnivores_list)
 
     def find_nearest_herbivore(self, herbivores_list):
         best_dist = self.vision + 1
-        best_dx, best_dy = 0, 0
         found = False
+        best_dx, best_dy = 0, 0
         for h in herbivores_list:
             dx = h.x - self.x
             dy = h.y - self.y
@@ -488,7 +473,6 @@ class Carnivore:
         dx, dy = direction
         nx = (self.x + (1 if dx>0 else -1 if dx<0 else 0)) % GRID_WIDTH
         ny = (self.y + (1 if dy>0 else -1 if dy<0 else 0)) % GRID_HEIGHT
-
         if not self.cell_occupied(nx, ny, carnivores_list):
             self.x, self.y = nx, ny
         else:
@@ -539,11 +523,11 @@ class Carnivore:
         baby.repro_cooldown_timer = REPRODUCTION_COOLDOWN
         carnivores_list.append(baby)
 
-        # Parent on cooldown
         self.repro_cooldown_timer = REPRODUCTION_COOLDOWN
 
     def is_dead(self):
         return self.energy <= 0
+
 
 ###########################################
 # HISTORY / SNAPSHOT
@@ -566,6 +550,46 @@ def load_state_into_sim(state, producers, herbivores, carnivores):
     producers.extend(copy.deepcopy(state.producers))
     herbivores.extend(copy.deepcopy(state.herbivores))
     carnivores.extend(copy.deepcopy(state.carnivores))
+
+###########################################
+# RANDOM BORDER SPAWN
+###########################################
+def random_border_cell():
+    """
+    Returns a (x, y) coordinate on the perimeter (border) of the grid.
+    """
+    side = random.choice(["TOP", "BOTTOM", "LEFT", "RIGHT"])
+    if side == "TOP":
+        return (random.randint(0, GRID_WIDTH - 1), 0)
+    elif side == "BOTTOM":
+        return (random.randint(0, GRID_WIDTH - 1), GRID_HEIGHT - 1)
+    elif side == "LEFT":
+        return (0, random.randint(0, GRID_HEIGHT - 1))
+    else:  # RIGHT
+        return (GRID_WIDTH - 1, random.randint(0, GRID_HEIGHT - 1))
+
+def spawn_random_organism_on_border(producers, herbivores, carnivores):
+    """
+    Small chance each turn to spawn a random organism at the border.
+    e.g., 50% Producer, 30% Herbivore, 20% Carnivore.
+    """
+    x, y = random_border_cell()
+    r = random.random()
+    if r < 0.40:
+        # Spawn a Producer
+        energy = random.randint(*PRODUCER_INIT_ENERGY_RANGE)
+        new_prod = Producer(x, y, energy)
+        producers.append(new_prod)
+    elif r < 0.65:
+        # Spawn a Herbivore
+        energy = random.randint(*HERBIVORE_INIT_ENERGY_RANGE)
+        new_herb = Herbivore(x, y, energy)
+        herbivores.append(new_herb)
+    else:
+        # Spawn a Carnivore
+        energy = random.randint(*CARNIVORE_INIT_ENERGY_RANGE)
+        new_carn = Carnivore(x, y, energy)
+        carnivores.append(new_carn)
 
 ###########################################
 # STAT HELPERS
@@ -615,7 +639,7 @@ def log_and_print_stats(t, producers, herbivores, carnivores, csv_writer):
 def run_simulation_interactive():
     pygame.init()
     screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-    pygame.display.set_caption("Producers, Herbivores, Carnivores A-Life")
+    pygame.display.set_caption("A-Life w/ Random Border Spawns")
     clock = pygame.time.Clock()
 
     # Fonts
@@ -683,6 +707,10 @@ def run_simulation_interactive():
             c.update(producers, herbivores, carnivores, environment)
         carnivores[:] = [c for c in carnivores if not c.is_dead()]
 
+        # 4) Chance to spawn a random organism on the border
+        if random.random() < SPAWN_CHANCE_PER_TURN:
+            spawn_random_organism_on_border(producers, herbivores, carnivores)
+
         step += 1
         store_state(history, step, producers, herbivores, carnivores)
         log_and_print_stats(step, producers, herbivores, carnivores, writer)
@@ -697,7 +725,7 @@ def run_simulation_interactive():
             if current_step < MAX_TIMESTEPS:
                 current_step = do_simulation_step(current_step)
             else:
-                is_paused = True  # or break if you want to auto-exit
+                is_paused = True  # or end simulation
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -726,7 +754,7 @@ def run_simulation_interactive():
 
         screen.fill((0, 0, 0))
 
-        # Draw the grid area
+        # Draw grid area (left)
         for p in producers:
             px = p.x * CELL_SIZE
             py = p.y * CELL_SIZE
@@ -736,7 +764,6 @@ def run_simulation_interactive():
             hx = h.x * CELL_SIZE
             hy = h.y * CELL_SIZE
             pygame.draw.circle(screen, (255, 255, 255), (hx + CELL_SIZE//2, hy + CELL_SIZE//2), CELL_SIZE//2)
-            # label them if desired
             lbl_surf = label_font.render(f"H{h.id}", True, (0,0,0))
             screen.blit(lbl_surf, (hx+2, hy+2))
 
@@ -747,27 +774,17 @@ def run_simulation_interactive():
             lbl_surf = label_font.render(f"C{c.id}", True, (0,0,0))
             screen.blit(lbl_surf, (cx+2, cy+2))
 
-        # Side Stats Panel (columns for Producers, Herbivores, Carnivores)
+        # Stats panel on the right
         panel_x = GRID_WIDTH * CELL_SIZE
         pygame.draw.rect(screen, (30, 30, 30), (panel_x, 0, STATS_PANEL_WIDTH, WINDOW_HEIGHT))
 
-        # Calculate stats
         p_count = len(producers)
-
         (h_sp, h_gen, h_met, h_vis) = calc_traits_avg(herbivores)
         h_count = len(herbivores)
-
         (c_sp, c_gen, c_met, c_vis) = calc_traits_avg(carnivores)
         c_count = len(carnivores)
 
-        # We'll arrange them in columns:
-        # Producer column at panel_x + 10
-        # Herbivore column at panel_x + 70
-        # Carnivore column at panel_x + 130
-        # Each row about 20 px vertical spacing
         row_y = 20
-
-        # Titles
         title_surf_p = main_font.render("Producers", True, (200, 200, 0))
         screen.blit(title_surf_p, (panel_x + 10, row_y))
 
@@ -778,44 +795,31 @@ def run_simulation_interactive():
         screen.blit(title_surf_c, (panel_x + 150, row_y))
 
         row_y += 25
-
-        # Producer stats (just count here)
         p_label_count = main_font.render(f"# {p_count}", True, (200, 200, 0))
         screen.blit(p_label_count, (panel_x + 20, row_y))
 
-        # Herbivores stats
         h_label_count = main_font.render(f"# {h_count}", True, (200, 200, 200))
         screen.blit(h_label_count, (panel_x + 90, row_y))
-
         h_label_sp = main_font.render(f"Sp {h_sp:.1f}", True, (200, 200, 200))
         screen.blit(h_label_sp, (panel_x + 90, row_y+20))
-
         h_label_gen = main_font.render(f"Gn {h_gen:.1f}", True, (200, 200, 200))
         screen.blit(h_label_gen, (panel_x + 90, row_y+40))
-
         h_label_met = main_font.render(f"Mt {h_met:.1f}", True, (200, 200, 200))
         screen.blit(h_label_met, (panel_x + 90, row_y+60))
-
         h_label_vis = main_font.render(f"Vs {h_vis:.1f}", True, (200, 200, 200))
         screen.blit(h_label_vis, (panel_x + 90, row_y+80))
 
-        # Carnivores stats
         c_label_count = main_font.render(f"# {c_count}", True, (255, 100, 100))
         screen.blit(c_label_count, (panel_x + 160, row_y))
-
         c_label_sp = main_font.render(f"Sp {c_sp:.1f}", True, (255, 100, 100))
         screen.blit(c_label_sp, (panel_x + 160, row_y+20))
-
         c_label_gen = main_font.render(f"Gn {c_gen:.1f}", True, (255, 100, 100))
         screen.blit(c_label_gen, (panel_x + 160, row_y+40))
-
         c_label_met = main_font.render(f"Mt {c_met:.1f}", True, (255, 100, 100))
         screen.blit(c_label_met, (panel_x + 160, row_y+60))
-
         c_label_vis = main_font.render(f"Vs {c_vis:.1f}", True, (255, 100, 100))
         screen.blit(c_label_vis, (panel_x + 160, row_y+80))
 
-        # Timestep or status at bottom
         status_str = "PAUSED" if is_paused else "RUN"
         info_str = f"Timestep: {current_step}  [{status_str}]"
         text_surf = main_font.render(info_str, True, (255, 255, 255))
