@@ -1,0 +1,9 @@
+deap==1.4.2
+h5py==3.12.1
+numpy
+pandas==2.2.3
+pygame
+python-dateutil==2.9.0.post0
+pytz==2024.2
+six==1.17.0
+tzdata==2025.1
