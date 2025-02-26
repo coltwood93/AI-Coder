@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import copy
 
 # For testing, we keep DummyOrganism here.
 # In your simulation, you would import your actual Consumer class.
@@ -29,26 +30,20 @@ class MemoryResidentSimulationStore:
         self.states = {}  # Dictionary keyed by timestep.
         self.current_timestep = None
 
-    def update_state(self, timestep, board, producers, consumers, debug_logs):
+    def update_state(self, timestep, environment, **organism_groups):
         """
-        Update the entire state for a given timestep.
-
-        Parameters:
-          - timestep (int): current simulation timestep.
-          - board: a 2D list (or array) representing the game board.
-          - producers: list of producer objects.
-          - consumers: list of consumer objects.
-          - debug_logs: list of log messages (strings) for this timestep.
+        Stores the environment and any number of organism groups (producers, herbivores, etc.)
+        in an in-memory dictionary for quick retrieval.
         """
         if self.mode != "live":
             raise RuntimeError("Cannot update state in replay mode.")
         
         state = {
-            "board": board,
-            "producers": producers,
-            "consumers": consumers,
-            "debug_logs": debug_logs
+            "environment": environment.copy(),
+            "organisms": {}
         }
+        for group_name, organisms in organism_groups.items():
+            state["organisms"][group_name] = [o for o in organisms]
         self.states[timestep] = state
         self.current_timestep = timestep
         self.update_mode_based_on_state()
