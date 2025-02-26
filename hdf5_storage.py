@@ -4,15 +4,15 @@ import numpy as np
 import json
 
 class HDF5Storage:
-    def __init__(self, filename):
-        self.filename = filename
+    def __init__(self, filepath):
+        self.filepath = filepath
         # Clear any existing file.
-        if os.path.exists(self.filename):
-            os.remove(self.filename)
-            print(f"Existing file '{self.filename}' removed.")
+        if os.path.exists(self.filepath):
+            os.remove(self.filepath)
+            print(f"Existing file '{self.filepath}' removed.")
     
     def create_empty_file(self):
-        with h5py.File(self.filename, "w") as f:
+        with h5py.File(self.filepath, "w") as f:
             pass
     
     def _to_python_scalars(self, obj_dict):
@@ -31,7 +31,7 @@ class HDF5Storage:
 
     # --- Saving Functions ---
     def save_board(self, timestep, board, dataset_name="board"):
-        with h5py.File(self.filename, "a") as f:
+        with h5py.File(self.filepath, "a") as f:
             group = f.require_group(f"timestep_{timestep}")
             if dataset_name in group:
                 del group[dataset_name]
@@ -39,7 +39,7 @@ class HDF5Storage:
             group.create_dataset(dataset_name, data=board_array, compression="gzip", chunks=True)
     
     def save_producers(self, timestep, producers):
-        with h5py.File(self.filename, "a") as f:
+        with h5py.File(self.filepath, "a") as f:
             group = f.require_group(f"timestep_{timestep}")
             # Convert each Producer's __dict__ to only have Python-native types
             data_dicts = []
@@ -58,7 +58,7 @@ class HDF5Storage:
         """
         Save consumers as JSON strings.
         """
-        with h5py.File(self.filename, "a") as f:
+        with h5py.File(self.filepath, "a") as f:
             group = f.require_group(f"timestep_{timestep}")
             data = [json.dumps(c.__dict__) for c in consumers]
             dt = h5py.string_dtype(encoding="utf-8")
@@ -67,7 +67,7 @@ class HDF5Storage:
             group.create_dataset("consumers", data=np.array(data, dtype=dt), dtype=dt, chunks=True)
     
     def save_debug_logs(self, timestep, debug_logs):
-        with h5py.File(self.filename, "a") as f:
+        with h5py.File(self.filepath, "a") as f:
             group = f.require_group(f"timestep_{timestep}")
             dt = h5py.string_dtype(encoding="utf-8")
             if "debug_logs" in group:
@@ -79,6 +79,25 @@ class HDF5Storage:
         self.save_producers(timestep, producers)
         self.save_consumers(timestep, consumers)
         self.save_debug_logs(timestep, debug_logs)
+    
+    def save_state(self, step, environment, **organism_groups):
+        """
+        Saves environment and organism groups in HDF5 format. 
+        """
+        with h5py.File(self.filepath, "a") as f:
+            group = f.require_group(f"step_{step}")
+            # Save environment
+            env_array = np.array(environment, dtype=np.float32)
+            if "environment" in group:
+                del group["environment"]
+            group.create_dataset("environment", data=env_array, compression="gzip", chunks=True)
+            # Save organism groups
+            for group_name, organisms in organism_groups.items():
+                data_dicts = [json.dumps(self._to_python_scalars(o.__dict__)) for o in organisms]
+                dt = h5py.string_dtype(encoding="utf-8")
+                if group_name in group:
+                    del group[group_name]
+                group.create_dataset(group_name, data=np.array(data_dicts, dtype=dt), dtype=dt, chunks=True)
     
     # --- Loading Functions ---
     def _extract_state(self, group):
@@ -93,7 +112,7 @@ class HDF5Storage:
     
     def load_simulation_state(self, timestep=None):
         states = []
-        with h5py.File(self.filename, "r") as f:
+        with h5py.File(self.filepath, "r") as f:
             if timestep is not None:
                 group_name = f"timestep_{timestep}"
                 if group_name in f:

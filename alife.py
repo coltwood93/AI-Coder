@@ -223,9 +223,13 @@ def run_simulation_interactive():
         oen = random.randint(*OMNIVORE_INIT_ENERGY_RANGE)
         omnivores.append(Omnivore(ox, oy, oen))
 
+    memory_store = MemoryResidentSimulationStore()
+    hdf5_store = HDF5Storage("simulation_results.hdf5")
+
     history = []
     current_step = 0
     is_paused = False
+    is_replaying = False
 
     store_state(history, current_step, producers, herbivores, carnivores, omnivores, environment)
 
@@ -280,6 +284,25 @@ def run_simulation_interactive():
 
         step += 1
         store_state(history, step, producers, herbivores, carnivores, omnivores, environment)
+
+        # Use the updated signatures
+        memory_store.update_state(
+            step,
+            environment,
+            producers=producers,
+            herbivores=herbivores,
+            carnivores=carnivores,
+            omnivores=omnivores
+        )
+        hdf5_store.save_state(
+            step,
+            environment,
+            producers=producers,
+            herbivores=herbivores,
+            carnivores=carnivores,
+            omnivores=omnivores
+        )
+
         log_and_print_stats(step, producers, herbivores, carnivores, omnivores, writer)
         return step
 
@@ -287,13 +310,27 @@ def run_simulation_interactive():
     log_and_print_stats(0, producers, herbivores, carnivores, omnivores, writer)
 
     while True:
-        # auto-run if not paused & we're at newest state
-        if not is_paused and current_step == len(history) - 1:
+        #
+        # If not paused but we're behind the latest state, move forward one step in history.
+        #
+        if not is_paused and is_replaying and current_step < len(history) - 1:
+            current_step += 1
+            load_state_into_sim(history[current_step],
+                                producers, herbivores, carnivores, omnivores, environment)
+            if current_step == len(history) - 1:
+                is_replaying = False  # Automatically exit replay when caught up
+        #
+        # Already existing logic for auto-run if at newest state.
+        #
+        elif not is_paused and current_step == len(history) - 1:
+            # ...existing code...
             if current_step < MAX_TIMESTEPS:
                 current_step = do_simulation_step(current_step)
             else:
                 is_paused = True
-
+        #
+        # ...existing code...
+        #
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 csvfile.close()
@@ -301,22 +338,35 @@ def run_simulation_interactive():
                 sys.exit()
             elif event.type == pygame.KEYDOWN:
                 if event.key == PAUSE_KEY:
+                    # Toggle pause, but don't force is_replaying = False
                     is_paused = not is_paused
+                    # ...existing code...
                 elif event.key == STEP_BACK_KEY:
+                    # ...existing code...
                     if is_paused and current_step > 0:
                         current_step -= 1
-                        load_state_into_sim(history[current_step], producers, herbivores, carnivores, omnivores, environment)
+                        load_state_into_sim(history[current_step],
+                                            producers, herbivores, carnivores, omnivores, environment)
+                        is_replaying = True
                 elif event.key == STEP_FORWARD_KEY:
+                    # ...existing code...
                     if is_paused:
                         if current_step < len(history) - 1:
                             current_step += 1
-                            load_state_into_sim(history[current_step], producers, herbivores, carnivores, omnivores, environment)
+                            load_state_into_sim(history[current_step],
+                                                producers, herbivores, carnivores, omnivores, environment)
                         else:
                             if current_step < MAX_TIMESTEPS:
                                 current_step = do_simulation_step(current_step)
+                        is_replaying = True
 
         # draw
         screen.fill((0, 0, 0))
+
+        # Only load from history if we're stepping back or forward
+        if is_paused and is_replaying:
+            st = history[current_step]
+            load_state_into_sim(st, producers, herbivores, carnivores, omnivores, environment)
 
         # Draw nutrient environment - blue gradient (darker blue = more nutrients)
         for x in range(GRID_WIDTH):
