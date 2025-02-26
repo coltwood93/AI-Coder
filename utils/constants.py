@@ -1,3 +1,5 @@
+import pygame
+
 GRID_WIDTH, GRID_HEIGHT = 20, 20
 CELL_SIZE = 20
 
@@ -76,7 +78,6 @@ NUTRIENT_DECAY_RATE = 0.01
 CONSUMER_NUTRIENT_RELEASE = 0.5  # Increased nutrient release
 
 # Pygame keys
-import pygame
 PAUSE_KEY = pygame.K_p
 STEP_BACK_KEY = pygame.K_LEFT
 STEP_FORWARD_KEY = pygame.K_RIGHT
