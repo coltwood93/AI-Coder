@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import copy
 
 # For testing, we keep DummyOrganism here.
 # In your simulation, you would import your actual Consumer class.
