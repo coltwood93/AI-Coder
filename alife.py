@@ -30,6 +30,12 @@ from organisms.omnivore import Omnivore
 # Set random seed for reproducibility
 random.seed()
 
+# Define state constants - add these at the top of the file or where constants are defined
+MAIN_MENU = "main_menu"
+OPTIONS_MENU = "options_menu"
+SIMULATION = "simulation"
+PAUSE_MENU = "pause_menu"
+
 ###########################################
 # ENVIRONMENT / SEASONS / DISEASE
 ###########################################
@@ -309,108 +315,61 @@ def run_simulation_interactive():
     # Log initial
     log_and_print_stats(0, producers, herbivores, carnivores, omnivores, writer)
 
-    while True:
-        #
-        # If not paused but we're behind the latest state, move forward one step in history.
-        #
-        if not is_paused and is_replaying and current_step < len(history) - 1:
-            current_step += 1
-            load_state_into_sim(history[current_step],
-                                producers, herbivores, carnivores, omnivores, environment)
-            if current_step == len(history) - 1:
-                is_replaying = False  # Automatically exit replay when caught up
-        #
-        # Already existing logic for auto-run if at newest state.
-        #
-        elif not is_paused and current_step == len(history) - 1:
-            # ...existing code...
-            if current_step < MAX_TIMESTEPS:
-                current_step = do_simulation_step(current_step)
-            else:
-                is_paused = True
-        #
-        # ...existing code...
-        #
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                csvfile.close()
-                pygame.quit()
-                sys.exit()
-            elif event.type == pygame.KEYDOWN:
-                if event.key == PAUSE_KEY:
-                    # Toggle pause, but don't force is_replaying = False
-                    is_paused = not is_paused
-                    # ...existing code...
-                elif event.key == STEP_BACK_KEY:
-                    # ...existing code...
-                    if is_paused and current_step > 0:
-                        current_step -= 1
-                        load_state_into_sim(history[current_step],
-                                            producers, herbivores, carnivores, omnivores, environment)
-                        is_replaying = True
-                elif event.key == STEP_FORWARD_KEY:
-                    # ...existing code...
-                    if is_paused:
-                        if current_step < len(history) - 1:
-                            current_step += 1
-                            load_state_into_sim(history[current_step],
-                                                producers, herbivores, carnivores, omnivores, environment)
-                        else:
-                            if current_step < MAX_TIMESTEPS:
-                                current_step = do_simulation_step(current_step)
-                        is_replaying = True
+    # MAIN GAME LOOP - This is the key part that needs attention
+    current_state = MAIN_MENU  # Start in the main menu
+    from_main_menu = True
+    running = True
+    is_paused = False  # Start unpaused when simulation begins
 
-        # draw
-        screen.fill((0, 0, 0))
+    # Debug print to verify initial state
+    print(f"Starting in state: {current_state}")
 
-        # Only load from history if we're stepping back or forward
-        if is_paused and is_replaying:
-            st = history[current_step]
-            load_state_into_sim(st, producers, herbivores, carnivores, omnivores, environment)
-
-        # Draw nutrient environment - blue gradient (darker blue = more nutrients)
+    def render_simulation(surface):
+        """Renders the simulation state to the given surface."""
+        surface.fill((0, 0, 0))
+        
+        # Render environment (nutrient levels as blue gradient)
         for x in range(GRID_WIDTH):
             for y in range(GRID_HEIGHT):
-                val = environment[x, y]  # nutrient level (0 to 1)
+                val = environment[x, y]
                 r = int(0 * val)
                 g = int(0 * val)
                 b = int(255 * val)
-                pygame.draw.rect(screen, (r, g, b), (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+                pygame.draw.rect(surface, (r, g, b), (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE))
 
-        # Draw organisms
-        # Producers as green squares
+        # Render producers (green squares)
         for p in producers:
             px = p.x * CELL_SIZE
             py = p.y * CELL_SIZE
-            pygame.draw.rect(screen, (0, 200, 0), (px, py, CELL_SIZE, CELL_SIZE))
+            pygame.draw.rect(surface, (0, 200, 0), (px, py, CELL_SIZE, CELL_SIZE))
 
-        # Herbivores as white circles
+        # Render herbivores (white circles)
         for h in herbivores:
             hx = h.x * CELL_SIZE
             hy = h.y * CELL_SIZE
-            pygame.draw.circle(screen, (255, 255, 255), (hx + CELL_SIZE//2, hy + CELL_SIZE//2), CELL_SIZE//2)
+            pygame.draw.circle(surface, (255, 255, 255), (hx + CELL_SIZE//2, hy + CELL_SIZE//2), CELL_SIZE//2)
             lbl = label_font.render(f"H{h.id}", True, (0,0,0))
-            screen.blit(lbl, (hx+2, hy+2))
+            surface.blit(lbl, (hx+2, hy+2))
 
-        # Carnivores as red circles
+        # Render carnivores (red circles)
         for c in carnivores:
             cx = c.x * CELL_SIZE
             cy = c.y * CELL_SIZE
-            pygame.draw.circle(screen, (255, 0, 0), (cx + CELL_SIZE//2, cy + CELL_SIZE//2), CELL_SIZE//2)
+            pygame.draw.circle(surface, (255, 0, 0), (cx + CELL_SIZE//2, cy + CELL_SIZE//2), CELL_SIZE//2)
             lbl = label_font.render(f"C{c.id}", True, (0,0,0))
-            screen.blit(lbl, (cx+2, cy+2))
+            surface.blit(lbl, (cx+2, cy+2))
 
-        # Omnivores as orange circles
+        # Render omnivores (orange circles)
         for o in omnivores:
             ox = o.x * CELL_SIZE
             oy = o.y * CELL_SIZE
-            pygame.draw.circle(screen, (255, 165, 0), (ox + CELL_SIZE//2, oy + CELL_SIZE//2), CELL_SIZE//2)
+            pygame.draw.circle(surface, (255, 165, 0), (ox + CELL_SIZE//2, oy + CELL_SIZE//2), CELL_SIZE//2)
             lbl = label_font.render(f"O{o.id}", True, (0,0,0))
-            screen.blit(lbl, (ox+2, oy+2))
+            surface.blit(lbl, (ox+2, oy+2))
 
-        # stats panel
+        # Render stats panel
         panel_x = GRID_WIDTH * CELL_SIZE
-        pygame.draw.rect(screen, (30, 30, 30), (panel_x, 0, STATS_PANEL_WIDTH, WINDOW_HEIGHT))
+        pygame.draw.rect(surface, (30, 30, 30), (panel_x, 0, STATS_PANEL_WIDTH, WINDOW_HEIGHT))
 
         p_count = len(producers)
         (h_sp, h_gen, h_met, h_vis) = calc_traits_avg(herbivores)
@@ -421,69 +380,254 @@ def run_simulation_interactive():
         o_count = len(omnivores)
 
         row_y = 20
-        # Titles
         surf_p = main_font.render("Producers", True, (200, 200, 0))
-        screen.blit(surf_p, (panel_x + 10, row_y))
+        surface.blit(surf_p, (panel_x + 10, row_y))
         surf_h = main_font.render("Herbivores", True, (200, 200, 200))
-        screen.blit(surf_h, (panel_x + 80, row_y))
+        surface.blit(surf_h, (panel_x + 80, row_y))
         surf_c = main_font.render("Carnivores", True, (255, 100, 100))
-        screen.blit(surf_c, (panel_x + 150, row_y))
+        surface.blit(surf_c, (panel_x + 150, row_y))
 
         row_y += 25
-        # Producer count
         lbl_p = main_font.render(f"# {p_count}", True, (200, 200, 0))
-        screen.blit(lbl_p, (panel_x + 20, row_y))
+        surface.blit(lbl_p, (panel_x + 20, row_y))
 
-        # Herb column
         lbl_hc = main_font.render(f"# {h_count}", True, (200, 200, 200))
-        screen.blit(lbl_hc, (panel_x + 90, row_y))
+        surface.blit(lbl_hc, (panel_x + 90, row_y))
         lbl_hsp = main_font.render(f"Sp {h_sp:.1f}", True, (200, 200, 200))
-        screen.blit(lbl_hsp, (panel_x + 90, row_y+20))
+        surface.blit(lbl_hsp, (panel_x + 90, row_y+20))
         lbl_hgen = main_font.render(f"Gn {h_gen:.1f}", True, (200, 200, 200))
-        screen.blit(lbl_hgen, (panel_x + 90, row_y+40))
+        surface.blit(lbl_hgen, (panel_x + 90, row_y+40))
         lbl_hmet = main_font.render(f"Mt {h_met:.1f}", True, (200, 200, 200))
-        screen.blit(lbl_hmet, (panel_x + 90, row_y+60))
+        surface.blit(lbl_hmet, (panel_x + 90, row_y+60))
         lbl_hvis = main_font.render(f"Vs {h_vis:.1f}", True, (200, 200, 200))
-        screen.blit(lbl_hvis, (panel_x + 90, row_y+80))
+        surface.blit(lbl_hvis, (panel_x + 90, row_y+80))
 
-        # Carn column
         lbl_cc = main_font.render(f"# {c_count}", True, (255, 100, 100))
-        screen.blit(lbl_cc, (panel_x + 160, row_y))
+        surface.blit(lbl_cc, (panel_x + 160, row_y))
         lbl_csp = main_font.render(f"Sp {c_sp:.1f}", True, (255, 100, 100))
-        screen.blit(lbl_csp, (panel_x + 160, row_y+20))
+        surface.blit(lbl_csp, (panel_x + 160, row_y+20))
         lbl_cgen = main_font.render(f"Gn {c_gen:.1f}", True, (255, 100, 100))
-        screen.blit(lbl_cgen, (panel_x + 160, row_y+40))
+        surface.blit(lbl_cgen, (panel_x + 160, row_y+40))
         lbl_cmet = main_font.render(f"Mt {c_met:.1f}", True, (255, 100, 100))
-        screen.blit(lbl_cmet, (panel_x + 160, row_y+60))
+        surface.blit(lbl_cmet, (panel_x + 160, row_y+60))
         lbl_cvis = main_font.render(f"Vs {c_vis:.1f}", True, (255, 100, 100))
-        screen.blit(lbl_cvis, (panel_x + 160, row_y+80))
+        surface.blit(lbl_cvis, (panel_x + 160, row_y+80))
 
-        # Omnivores column
         row_y2 = row_y + 120
         surf_o = main_font.render("Omnivores", True, (255, 165, 0))
-        screen.blit(surf_o, (panel_x + 80, row_y2))
+        surface.blit(surf_o, (panel_x + 80, row_y2))
 
         row_y2 += 25
         lbl_oc = main_font.render(f"# {o_count}", True, (255, 165, 0))
-        screen.blit(lbl_oc, (panel_x + 90, row_y2))
+        surface.blit(lbl_oc, (panel_x + 90, row_y2))
         lbl_osp = main_font.render(f"Sp {o_sp:.1f}", True, (255, 165, 0))
-        screen.blit(lbl_osp, (panel_x + 90, row_y2+20))
+        surface.blit(lbl_osp, (panel_x + 90, row_y2+20))
         lbl_ogen = main_font.render(f"Gn {o_gen:.1f}", True, (255, 165, 0))
-        screen.blit(lbl_ogen, (panel_x + 90, row_y2+40))
+        surface.blit(lbl_ogen, (panel_x + 90, row_y2+40))
         lbl_omet = main_font.render(f"Mt {o_met:.1f}", True, (255, 165, 0))
-        screen.blit(lbl_omet, (panel_x + 90, row_y2+60))
+        surface.blit(lbl_omet, (panel_x + 90, row_y2+60))
         lbl_ovis = main_font.render(f"Vs {o_vis:.1f}", True, (255, 165, 0))
-        screen.blit(lbl_ovis, (panel_x + 90, row_y2+80))
+        surface.blit(lbl_ovis, (panel_x + 90, row_y2+80))
 
-        # Show season and step at bottom
         season_now = current_season(current_step)
         status_str = "PAUSED" if is_paused else "RUN"
         info_str = f"Timestep: {current_step}, Season: {season_now}, [{status_str}]"
         text_surf = main_font.render(info_str, True, (255, 255, 255))
-        screen.blit(text_surf, (panel_x + 10, WINDOW_HEIGHT - 30))
+        surface.blit(text_surf, (panel_x + 10, WINDOW_HEIGHT - 30))
 
+    while running:
+        # Handle events based on the current state
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+                break
+
+            # Debug event handling
+            if event.type == pygame.KEYDOWN:
+                print(f"Key pressed: {pygame.key.name(event.key)} in state: {current_state}")
+
+            # State-specific event handling
+            if current_state == MAIN_MENU:
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_s:
+                        print("Starting simulation from main menu")
+                        current_state = SIMULATION
+                        is_paused = False  # Ensure simulation starts unpaused
+                    elif event.key == pygame.K_o:
+                        print("Opening options from main menu")
+                        current_state = OPTIONS_MENU
+                        from_main_menu = True
+                    elif event.key == pygame.K_q or event.key == pygame.K_ESCAPE:
+                        print("Quitting from main menu")
+                        running = False
+            
+            elif current_state == OPTIONS_MENU:
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        print(f"Returning from options to {'main menu' if from_main_menu else 'pause menu'}")
+                        current_state = MAIN_MENU if from_main_menu else PAUSE_MENU
+                    elif event.key == pygame.K_q:
+                        print("Quitting from options menu")
+                        running = False
+            
+            elif current_state == SIMULATION:
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_p:
+                        print(f"{'Pausing' if not is_paused else 'Resuming'} simulation")
+                        is_paused = not is_paused
+                    elif event.key == pygame.K_ESCAPE:
+                        print("Opening pause menu")
+                        current_state = PAUSE_MENU
+                    elif event.key == STEP_BACK_KEY:
+                        # Auto-pause if not already paused
+                        if not is_paused:
+                            print("Auto-pausing for step back")
+                            is_paused = True
+                            
+                        # Then perform the step back operation
+                        if current_step > 0:
+                            print(f"Stepping back to {current_step-1}")
+                            current_step -= 1
+                            load_state_into_sim(history[current_step],
+                                            producers, herbivores, carnivores, omnivores, environment)
+                            is_replaying = True
+                    elif event.key == STEP_FORWARD_KEY:
+                        # Auto-pause if not already paused
+                        if not is_paused:
+                            print("Auto-pausing for step forward")
+                            is_paused = True
+                            
+                        # Then perform the step forward operation
+                        if current_step < len(history) - 1:
+                            print(f"Stepping forward to {current_step+1}")
+                            current_step += 1
+                            load_state_into_sim(history[current_step],
+                                            producers, herbivores, carnivores, omnivores, environment)
+                            is_replaying = True
+                        elif current_step < MAX_TIMESTEPS:
+                            print(f"Simulating next step from {current_step}")
+                            current_step = do_simulation_step(current_step)
+            
+            elif current_state == PAUSE_MENU:
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_r or event.key == pygame.K_p:
+                        print("Resuming simulation from pause menu")
+                        current_state = SIMULATION
+                        is_paused = False
+                    elif event.key == pygame.K_o:
+                        print("Opening options from pause menu")
+                        current_state = OPTIONS_MENU
+                        from_main_menu = False
+                    elif event.key == pygame.K_m:
+                        print("Returning to main menu from pause menu")
+                        current_state = MAIN_MENU
+                    elif event.key == pygame.K_q or event.key == pygame.K_ESCAPE:
+                        print("Quitting from pause menu")
+                        running = False
+
+        # Update simulation state if in simulation mode and not paused
+        if current_state == SIMULATION and not is_paused:
+            if is_replaying and current_step < len(history) - 1:
+                # Replay mode - stepping through history
+                print(f"Replaying step: {current_step+1}")
+                current_step += 1
+                load_state_into_sim(history[current_step], 
+                                producers, herbivores, carnivores, omnivores, environment)
+                
+                # Check if we've reached the end of history
+                if current_step == len(history) - 1:
+                    print("Reached end of history, switching to live simulation")
+                    is_replaying = False
+            elif not is_replaying and current_step < MAX_TIMESTEPS:
+                # Live simulation mode - calculating new steps
+                current_step = do_simulation_step(current_step)
+
+        # Clear the screen before drawing
+        screen.fill((0, 0, 0))
+
+        # Render the current screen based on state
+        if current_state == MAIN_MENU:
+            # Clear screen and draw the main menu
+            screen.fill((0, 0, 50))
+            font = pygame.font.SysFont(None, 48)
+            title_surf = font.render("A-Life Simulation", True, (255, 255, 255))
+            title_rect = title_surf.get_rect(center=(WINDOW_WIDTH // 2, 100))
+            screen.blit(title_surf, title_rect)
+            
+            small_font = pygame.font.SysFont(None, 32)
+            instructions = [
+                "[S] Start Simulation",
+                "[O] Options",
+                "[Q/ESC] Quit"
+            ]
+            y = 200
+            for line in instructions:
+                text = small_font.render(line, True, (200, 200, 200))
+                rect = text.get_rect(center=(WINDOW_WIDTH // 2, y))
+                screen.blit(text, rect)
+                y += 40
+            
+        elif current_state == OPTIONS_MENU:
+            # Draw the options menu
+            screen.fill((30, 30, 30))
+            font = pygame.font.SysFont(None, 48)
+            title_surf = font.render("OPTIONS", True, (200, 200, 200))
+            title_rect = title_surf.get_rect(center=(WINDOW_WIDTH // 2, 100))
+            screen.blit(title_surf, title_rect)
+            
+            small_font = pygame.font.SysFont(None, 32)
+            return_text = "[ESC] Return to " + ("Main Menu" if from_main_menu else "Pause Menu")
+            lines = [
+                return_text,
+                "[Q] Quit"
+            ]
+            y = 200
+            for line in lines:
+                text = small_font.render(line, True, (220, 220, 220))
+                rect = text.get_rect(center=(WINDOW_WIDTH // 2, y))
+                screen.blit(text, rect)
+                y += 40
+            
+        elif current_state == SIMULATION:
+            # Draw the simulation
+            render_simulation(screen)
+            
+        elif current_state == PAUSE_MENU:
+            # Draw the simulation with pause menu overlay
+            render_simulation(screen)
+            
+            # Semi-transparent overlay
+            overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 180))
+            screen.blit(overlay, (0, 0))
+            
+            font = pygame.font.SysFont(None, 48)
+            text_surf = font.render("PAUSED", True, (255, 255, 255))
+            rect = text_surf.get_rect(center=(WINDOW_WIDTH // 2, 100))
+            screen.blit(text_surf, rect)
+            
+            small_font = pygame.font.SysFont(None, 32)
+            menu_items = [
+                "[R/P] Resume",
+                "[O] Options",
+                "[M] Main Menu",
+                "[Q/ESC] Quit"
+            ]
+            y = 200
+            for item in menu_items:
+                line_surf = small_font.render(item, True, (200, 200, 200))
+                rect = line_surf.get_rect(center=(WINDOW_WIDTH // 2, y))
+                screen.blit(line_surf, rect)
+                y += 40
+
+        # Update the display
         pygame.display.flip()
         clock.tick(FPS)
+
+    # Clean up resources
+    csvfile.close()
+    pygame.quit()
+    sys.exit()
 
 if __name__ == "__main__":
     run_simulation_interactive()
