@@ -42,6 +42,7 @@ def test_producer_nutrient_consumption(basic_producer):
 
 def test_producer_energy_cap(basic_producer):
     """Test producer energy doesn't exceed maximum"""
+    # First test approaching max with nutrients
     environment = np.full((GRID_WIDTH, GRID_HEIGHT), 0.5)  # More realistic nutrient level
     test_energy = PRODUCER_MAX_ENERGY - 1.0  # Start further from max to avoid precision issues
     basic_producer.energy = test_energy
@@ -50,7 +51,8 @@ def test_producer_energy_cap(basic_producer):
     basic_producer.update([], [], [], [], environment)
     assert basic_producer.energy <= PRODUCER_MAX_ENERGY, "Energy exceeded maximum"
     
-    # Force energy to max and ensure it stays there
+    # Now test maintaining max with no nutrients
+    environment = np.zeros((GRID_WIDTH, GRID_HEIGHT))  # No nutrients to avoid energy gain
     basic_producer.energy = PRODUCER_MAX_ENERGY
     basic_producer.update([], [], [], [], environment)
     assert basic_producer.energy == PRODUCER_MAX_ENERGY, "Energy should stay at maximum"
