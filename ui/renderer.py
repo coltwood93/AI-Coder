@@ -11,6 +11,7 @@ from utils.constants import (
 )
 from simulation.environment import current_season
 from simulation.stats import calc_traits_avg
+from simulation.stats_visualizer import SimulationGraphRenderer
 
 class SimulationRenderer:
     """Class to handle all rendering operations for the simulation."""
@@ -22,6 +23,7 @@ class SimulationRenderer:
         self.stats_scroll_y = 0
         self.max_scroll_y = 0
         self.title_font = pygame.font.SysFont(None, 28)
+        self.graph_renderer = SimulationGraphRenderer(main_font)
     
     def render_simulation(self, environment, producers, herbivores, carnivores, omnivores, 
                         current_step, is_paused, is_replaying):
@@ -89,6 +91,43 @@ class SimulationRenderer:
             self.stats_scroll_y = max(0, min(self.stats_scroll_y, self.max_scroll_y))
             return True
         return False
+    
+    def render_stats_view(self, simulation):
+        """Renders a detailed statistics view for the simulation."""
+        # Fill background
+        self.screen.fill((15, 25, 35))
+        
+        # Draw title
+        title_font = pygame.font.SysFont(None, 36)
+        title_surf = title_font.render("Simulation Statistics", True, (255, 255, 255))
+        title_rect = title_surf.get_rect(midtop=(WINDOW_WIDTH // 2, 20))
+        self.screen.blit(title_surf, title_rect)
+        
+        # Layout settings - adjust to give more space to population history
+        graph_height = 280
+        stats_height = 200  # Increased from 150
+        padding = 20
+        
+        # Draw population history graph
+        graph_rect = (padding, 60, WINDOW_WIDTH - padding*2, graph_height)
+        self.graph_renderer.render_population_history(
+            self.screen, 
+            simulation.population_history, 
+            graph_rect
+        )
+        
+        # Draw current statistics summary
+        stats_rect = (padding, 60 + graph_height + 10, WINDOW_WIDTH - padding*2, stats_height)
+        self.graph_renderer.render_stats_summary(
+            self.screen, 
+            simulation.get_current_stats(),
+            stats_rect
+        )
+        
+        # Draw instructions at bottom
+        instructions_surf = self.main_font.render("Press [ESC] to return", True, (200, 200, 200))
+        instructions_rect = instructions_surf.get_rect(midbottom=(WINDOW_WIDTH // 2, WINDOW_HEIGHT - 10))
+        self.screen.blit(instructions_surf, instructions_rect)
     
     # Private rendering methods
     def _render_environment(self, environment):

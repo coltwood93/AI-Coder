@@ -12,7 +12,7 @@ from utils.constants import (
     GRID_DISPLAY_WIDTH, GRID_DISPLAY_HEIGHT,
     STEP_BACK_KEY, STEP_FORWARD_KEY
 )
-from utils.app_states import MAIN_MENU, OPTIONS_MENU, SIMULATION, PAUSE_MENU
+from utils.app_states import MAIN_MENU, OPTIONS_MENU, SIMULATION, PAUSE_MENU, STATS_VIEW
 
 class InputHandler:
     """Centralizes input handling for the simulation."""
@@ -34,7 +34,8 @@ class InputHandler:
                     MAIN_MENU: self._handle_main_menu_input,
                     OPTIONS_MENU: self._handle_options_menu_input,
                     SIMULATION: self._handle_simulation_input,
-                    PAUSE_MENU: self._handle_pause_menu_input
+                    PAUSE_MENU: self._handle_pause_menu_input,
+                    STATS_VIEW: self._handle_stats_view_input  # New handler for stats view
                 }
                 
                 # Call the appropriate handler based on current state
@@ -121,12 +122,22 @@ class InputHandler:
         elif event.key == pygame.K_o:
             print("Opening options from pause menu")
             return OPTIONS_MENU, False, True
+        elif event.key == pygame.K_s:
+            print("Opening stats view from pause menu")
+            return STATS_VIEW, False, True
         elif event.key == pygame.K_m:
             print("Returning to main menu from pause menu")
             return MAIN_MENU, True, True
         elif event.key == pygame.K_q:
             print("Quitting from pause menu")
             return None, None, False  # Signal to quit
+        return None  # No state change
+    
+    def _handle_stats_view_input(self, event, from_main_menu):
+        """Handle input in the stats view state."""
+        if event.key == pygame.K_ESCAPE:
+            print("Returning to pause menu from stats view")
+            return PAUSE_MENU, False, True
         return None  # No state change
     
     def _handle_step_back(self):

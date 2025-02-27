@@ -24,7 +24,7 @@ from simulation.environment import (
     current_season, update_environment, spawn_random_organism_on_border, disease_outbreak
 )
 from simulation.history import store_state, load_state_into_sim, SimulationState
-from simulation.stats import log_and_print_stats
+from simulation.stats import log_and_print_stats, calc_traits_avg
 
 class SimulationManager:
     """Manages the state and lifecycle of the simulation."""
@@ -45,11 +45,15 @@ class SimulationManager:
         self.memory_store = MemoryResidentSimulationStore()
         self.hdf5_store = HDF5Storage("simulation_results.hdf5")
         
+        # Add a population history tracker
+        self.population_history = []
+        
         # Initialize organisms
         self._initialize_organisms()
         
-        # Store initial state
+        # Store initial state and population data
         self._store_current_state()
+        self._store_population_stats()
         
         # Log initial stats
         log_and_print_stats(0, self.producers, self.herbivores, self.carnivores, self.omnivores, self.csv_writer)
@@ -109,6 +113,31 @@ class SimulationManager:
                 omnivores=self.omnivores
             )
     
+    def _store_population_stats(self):
+        """Store current population statistics for historical tracking."""
+        p_count = len(self.producers)
+        h_count = len(self.herbivores)
+        (h_sp, h_gen, h_met, h_vis) = calc_traits_avg(self.herbivores)
+        c_count = len(self.carnivores)
+        (c_sp, c_gen, c_met, c_vis) = calc_traits_avg(self.carnivores)
+        o_count = len(self.omnivores)
+        (o_sp, o_gen, o_met, o_vis) = calc_traits_avg(self.omnivores)
+        
+        # Store in history
+        self.population_history.append({
+            'step': self.current_step,
+            'producers': p_count,
+            'herbivores': h_count,
+            'carnivores': c_count,
+            'omnivores': o_count,
+            'stats': {
+                'producers': {'count': p_count},
+                'herbivores': {'count': h_count, 'speed': h_sp, 'generation': h_gen, 'metabolism': h_met, 'vision': h_vis},
+                'carnivores': {'count': c_count, 'speed': c_sp, 'generation': c_gen, 'metabolism': c_met, 'vision': c_vis},
+                'omnivores': {'count': o_count, 'speed': o_sp, 'generation': o_gen, 'metabolism': o_met, 'vision': o_vis}
+            }
+        })
+    
     def step_simulation(self):
         """Execute one step of the simulation."""
         # Don't step if we've reached the maximum timesteps
@@ -146,6 +175,7 @@ class SimulationManager:
         
         # Store current state
         self._store_current_state()
+        self._store_population_stats()  # Store population stats
         
         # Log stats
         log_and_print_stats(
@@ -234,6 +264,7 @@ class SimulationManager:
         
         # Reset the history
         self.history = []
+        self.population_history = []  # Also reset population history
         
         # Reset storage systems to avoid "replay mode" errors
         try:
@@ -265,6 +296,7 @@ class SimulationManager:
         
         # Store initial state
         self._store_current_state()
+        self._store_population_stats()  # Store initial population stats
         
         # Log initial stats
         log_and_print_stats(0, self.producers, self.herbivores, self.carnivores, self.omnivores, self.csv_writer)
@@ -285,3 +317,9 @@ class SimulationManager:
         Omnivore.reset_id_counter()
         
         print("Reset all organism ID counters")
+
+    def get_current_stats(self):
+        """Get the current simulation statistics for display."""
+        if self.population_history:
+            return self.population_history[-1]['stats']
+        return {}

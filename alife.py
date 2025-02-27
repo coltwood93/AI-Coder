@@ -16,7 +16,7 @@ from utils.constants import (
 )
 
 # Import app states
-from utils.app_states import MAIN_MENU, OPTIONS_MENU, SIMULATION, PAUSE_MENU
+from utils.app_states import MAIN_MENU, OPTIONS_MENU, SIMULATION, PAUSE_MENU, STATS_VIEW
 
 # Import simulation components
 from simulation.environment import current_season
@@ -161,9 +161,18 @@ class SimulationApp:
             self._render_simulation()  # Render simulation in background
             
             # Then overlay the pause menu
-            self.renderer.render_pause_overlay(
-                ["[R/P/ESC] Resume", "[X] Restart Simulation", "[O] Options", "[M] Main Menu", "[Q] Quit"]
-            )
+            self.renderer.render_pause_overlay([
+                "[R/P/ESC] Resume", 
+                "[X] Restart Simulation", 
+                "[S] View Stats",
+                "[O] Options", 
+                "[M] Main Menu", 
+                "[Q] Quit"
+            ])
+        
+        elif self.current_state == STATS_VIEW:
+            # Use the new stats view renderer
+            self.renderer.render_stats_view(self.simulation)
     
     def _render_simulation(self):
         """Helper to render the simulation state."""
