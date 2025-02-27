@@ -9,25 +9,22 @@ jobs:
   test:
     name: Run Python Tests
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: "3.11"
 
     steps:
     - uses: actions/checkout@v3
 
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python 3.11
       uses: actions/setup-python@v3
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: 3.11
 
     - name: Cache venv
       uses: actions/cache@v3
       with:
         path: .venv
-        key: ${{ runner.os }}-venv-${{ matrix.python-version }}-${{ hashFiles('**/requirements.txt') }}
+        key: ${{ runner.os }}-venv-3.11-${{ hashFiles('**/requirements.txt') }}
         restore-keys: |
-          ${{ runner.os }}-venv-${{ matrix.python-version }}-
+          ${{ runner.os }}-venv-3.11-
 
     - name: Create and activate virtual environment
       run: |
