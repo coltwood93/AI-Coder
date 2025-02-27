@@ -22,10 +22,12 @@ class Producer:
         Producer.next_id += 1
 
     def update(self, producers, herbivores, carnivores, omnivores, environment):
+        # Always consume nutrients and gain energy
         nutrient_taken = min(environment[self.x, self.y], PRODUCER_NUTRIENT_CONSUMPTION)
         self.energy += nutrient_taken * PRODUCER_ENERGY_GAIN
         environment[self.x, self.y] -= nutrient_taken
 
+        # Cap energy at maximum after gains
         if self.energy > PRODUCER_MAX_ENERGY:
             self.energy = PRODUCER_MAX_ENERGY
 
