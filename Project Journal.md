@@ -275,7 +275,40 @@ Final thoughts, it was a good week, feel like I am hitting my stride but also ha
 ... *(repeat section from Sprint 1)*
 
 ### Colton Woodruff
-... *(repeat section from Sprint 1)*
+
+#### AI Tools Used
+*   Github Copilot (with Gemini 2.0 Flash and Github Agent - Claude 3.5 Sonnet)
+*   Github Copilot Chat (within VS Code, using Gemini 2.0 Flash)
+*   Gemini-Code-Assist (Github Extension)
+
+#### Tasks and Features
+*   Implemented CI/CD pipelines using Github Actions. This involved creating three separate workflow YAML files:
+    *   **Linting and Formatting (Ruff):**  A workflow that runs Ruff on pull requests to ensure code style consistency and identify potential errors.
+    *   **Automated Testing (Pytest):** A workflow that executes Pytest unit tests on pull requests to verify code functionality.
+    *   **Docker Build:** A workflow that builds a Docker image for the project, facilitating deployment and environment consistency.
+*   Developed comprehensive unit tests for all project files using Pytest, guided by Github Copilot Agent.
+*    Integrated the Gemini-Code-Assist extension into the Github repository for automated PR summarization and review.
+
+#### Prompts and Outputs
+*   **Research and Decision-Making Prompts (Github Copilot Chat with Gemini 2.0 Flash):**  Used Gemini 2.0 Flash within VS Code (via Github Copilot Chat) to research best practices for CI/CD, determine appropriate tools (Ruff, Pytest, Github Actions), and plan the structure of the workflows.  Examples include prompts like: "What are the best practices for setting up CI/CD for a Python project?", "How can I integrate Ruff and Pytest with Github Actions?", and "What's the recommended structure for a Dockerfile for this type of project?".
+*   **Workflow Creation Prompts (Github Agent - Claude 3.5 Sonnet):**  Leveraged Github Agent (Claude 3.5 Sonnet) to generate the YAML files for the Github Actions workflows.  After discussing the workflow structure with Gemini 2.0 Flash in Copilot Chat, I transferred the conversation to Github Agent to generate the code.  Example initial prompts:  "Create a Github Actions workflow that runs Ruff on pull requests.", "Generate a workflow to run Pytest on pull requests.", and "Create a workflow to build a Docker image for the project." These were refined iteratively.
+*   **Unit Test Generation Prompts (Github Agent - Claude 3.5 Sonnet):** Used Github Agent to create Pytest unit tests.  Instead of generating tests for the entire project at once, prompts were focused on individual files or groups of related functions within larger files. Example prompts include: "Generate Pytest unit tests for the `producer.py` file." or "Create tests for the `consume` and `reproduce` functions in `consumer.py`."  This granular approach yielded significantly better results.
+*   **Gemini-Code-Assist Interaction (Github):** No explicit prompting was needed; the extension automatically generated a summary comment and a review comment on each pull request.  Used conversational prompts within the PR comments to ask clarifying questions, such as, "Can you elaborate on this suggested change?" and "What other potential issues might exist in this section of code?".
+
+#### Reflections on AI Quality
+*   **Github Agent (Claude 3.5 Sonnet) for Workflow Creation:**  Highly effective for generating well-structured YAML files.  The iterative nature of Github Agent allowed for fine-tuning and ensured the workflows were correctly configured.
+*   **Github Agent (Claude 3.5 Sonnet) for Unit Test Generation:**  Performance was highly dependent on the scope of the request.  Generating tests for the entire project at once resulted in numerous errors and poor test quality.  Focusing on smaller units (files or groups of functions) drastically improved results and made it easier to guide the agent and intervene when necessary.
+*   **Gemini-Code-Assist:** Provided accurate and useful summaries and reviews of pull requests. The automatic generation of these comments streamlined the review process. The ability to chat with the model within the PR comments facilitated deeper understanding and discussion.
+*   **Github Copilot Chat (Gemini 2.0 Flash):** Excellent for research, planning, and understanding the broader context of CI/CD and testing.  Served as a valuable "sounding board" for ideas before moving to code generation.
+
+#### AI Tool Integration
+*   This sprint showcased a multi-stage workflow utilizing different AI tools for specific purposes.  Github Copilot Chat (with Gemini 2.0 Flash) was used for initial research, planning, and decision-making.  Github Agent (with Claude 3.5 Sonnet) handled the code generation for both Github Actions workflows and Pytest unit tests. The Gemini-Code-Assist extension provided automated PR reviews and summarization. The seamless integration of Chat into Agent within VS Code (transferring the conversation) was particularly beneficial.
+
+#### Lessons Learned
+*   **Granularity is Key for Effective AI-Assisted Test Generation:**  Attempting to generate tests for an entire project at once with Github Agent is overwhelming and leads to poor results.  A file-by-file or function-by-function approach is significantly more effective and manageable.
+*   **Leverage AI for Research and Planning:** Github Copilot Chat (with Gemini 2.0 Flash) proved invaluable for researching best practices and making informed decisions about the CI/CD setup.
+*   **Automated PR Summarization and Review is a Time-Saver:** The Gemini-Code-Assist extension significantly streamlined the pull request review process, providing valuable insights and suggestions automatically.
+*   **Iterative Prompting with Focused Scope is Crucial:** Combining iterative refinement of prompts with a narrow focus (e.g., single file or function group) is essential for maximizing the effectiveness of Github Agent, particularly for complex tasks like test generation. The ability to move a conversation from Chat to Agent within the Github Copilot extension is highly effective.
 
 ### Tycin Wood
 ... *(repeat section from Sprint 1)*
