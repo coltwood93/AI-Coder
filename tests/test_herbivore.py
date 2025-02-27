@@ -3,7 +3,6 @@ import numpy as np
 from organisms.herbivore import Herbivore
 from organisms.producer import Producer
 from organisms.carnivore import Carnivore
-from organisms.omnivore import Omnivore
 from utils.constants import (
     GRID_WIDTH, GRID_HEIGHT, MAX_LIFESPAN_HERBIVORE, EAT_GAIN_HERBIVORE,
     DISEASE_ENERGY_DRAIN_MULTIPLIER, HERBIVORE_REPRO_THRESHOLD,

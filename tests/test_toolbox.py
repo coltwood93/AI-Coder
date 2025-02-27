@@ -1,4 +1,3 @@
-import pytest
 import random
 from deap import creator
 from utils.toolbox import toolbox, create_random_genome, custom_mutate
