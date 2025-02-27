@@ -1,11 +1,26 @@
 import pygame
 
+# Desired minimum window dimensions
+MIN_WINDOW_WIDTH = 800
+MIN_WINDOW_HEIGHT = 600
+
+# Grid dimensions (number of cells)
 GRID_WIDTH, GRID_HEIGHT = 20, 20
-CELL_SIZE = 20
+
+# Calculate cell size to fit at least the minimum window dimensions
+# but maintain proportionality
+BASE_CELL_SIZE = 20  # Default size if no stretching needed
+
+# Calculate what cell size would be needed to reach minimum dimensions
+width_cell_size = MIN_WINDOW_WIDTH / GRID_WIDTH
+height_cell_size = MIN_WINDOW_HEIGHT / GRID_HEIGHT
+
+# Use the larger of the two to ensure we meet or exceed both minimum dimensions
+CELL_SIZE = max(BASE_CELL_SIZE, width_cell_size, height_cell_size)
 
 STATS_PANEL_WIDTH = 220
-WINDOW_WIDTH = GRID_WIDTH * CELL_SIZE + STATS_PANEL_WIDTH
-WINDOW_HEIGHT = GRID_HEIGHT * CELL_SIZE
+WINDOW_WIDTH = int(GRID_WIDTH * CELL_SIZE + STATS_PANEL_WIDTH)
+WINDOW_HEIGHT = int(GRID_HEIGHT * CELL_SIZE)
 
 # Producers
 INITIAL_PRODUCERS = 15

@@ -186,7 +186,7 @@ def log_and_print_stats(t, producers, herbivores, carnivores, omnivores, csv_wri
 def run_simulation_interactive():
     pygame.init()
     screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-    pygame.display.set_caption("A-Life: Seasons, Disease, Omnivores, Nutrient Environment")
+    pygame.display.set_caption("A-Life: Seasons, Disease, Omnivores, Nutrient Environment")  # Fixed method name
     clock = pygame.time.Clock()
 
     main_font = pygame.font.SysFont(None, 24)
@@ -333,8 +333,14 @@ def run_simulation_interactive():
     # Debug print to verify initial state
     print(f"Starting in state: {current_state}")
 
+    # Add these variables for stats panel scrolling
+    stats_scroll_y = 0
+    max_scroll_y = 0  # Will be calculated during rendering
+    scroll_speed = 15  # Pixels per scroll event
+
     def render_simulation(surface):
         """Renders the simulation state to the given surface."""
+        nonlocal stats_scroll_y, max_scroll_y
         surface.fill((0, 0, 0))
         
         # Render environment (nutrient levels as blue gradient)
@@ -352,34 +358,57 @@ def run_simulation_interactive():
             py = p.y * CELL_SIZE
             pygame.draw.rect(surface, (0, 200, 0), (px, py, CELL_SIZE, CELL_SIZE))
 
+        # Calculate label font size based on cell size for better scaling
+        label_size = max(10, min(24, int(CELL_SIZE * 0.6)))
+        dynamic_label_font = pygame.font.SysFont(None, label_size)
+        
+        # Helper function to render centered labels on organisms
+        def render_centered_label(text, pos_x, pos_y, color, bg_color):
+            text_surf = dynamic_label_font.render(text, True, color)
+            text_rect = text_surf.get_rect(center=(pos_x + CELL_SIZE//2, pos_y + CELL_SIZE//2))
+            # Optional: Draw small rectangle behind text for better visibility
+            padding = 2
+            bg_rect = pygame.Rect(text_rect.x - padding, text_rect.y - padding, 
+                                 text_rect.width + padding*2, text_rect.height + padding*2)
+            pygame.draw.rect(surface, bg_color, bg_rect)
+            surface.blit(text_surf, text_rect)
+
         # Render herbivores (white circles)
         for h in herbivores:
             hx = h.x * CELL_SIZE
             hy = h.y * CELL_SIZE
+            # Draw the circle
             pygame.draw.circle(surface, (255, 255, 255), (hx + CELL_SIZE//2, hy + CELL_SIZE//2), CELL_SIZE//2)
-            lbl = label_font.render(f"H{h.id}", True, (0,0,0))
-            surface.blit(lbl, (hx+2, hy+2))
+            # Draw centered label
+            render_centered_label(f"H{h.id}", hx, hy, (0, 0, 0), (255, 255, 255))
 
         # Render carnivores (red circles)
         for c in carnivores:
             cx = c.x * CELL_SIZE
             cy = c.y * CELL_SIZE
+            # Draw the circle
             pygame.draw.circle(surface, (255, 0, 0), (cx + CELL_SIZE//2, cy + CELL_SIZE//2), CELL_SIZE//2)
-            lbl = label_font.render(f"C{c.id}", True, (0,0,0))
-            surface.blit(lbl, (cx+2, cy+2))
+            # Draw centered label
+            render_centered_label(f"C{c.id}", cx, cy, (0, 0, 0), (255, 0, 0))
 
         # Render omnivores (orange circles)
         for o in omnivores:
             ox = o.x * CELL_SIZE
             oy = o.y * CELL_SIZE
+            # Draw the circle
             pygame.draw.circle(surface, (255, 165, 0), (ox + CELL_SIZE//2, oy + CELL_SIZE//2), CELL_SIZE//2)
-            lbl = label_font.render(f"O{o.id}", True, (0,0,0))
-            surface.blit(lbl, (ox+2, oy+2))
-
-        # Render stats panel
+            # Draw centered label
+            render_centered_label(f"O{o.id}", ox, oy, (0, 0, 0), (255, 165, 0))
+        
+        # Render scrollable stats panel
         panel_x = GRID_WIDTH * CELL_SIZE
-        pygame.draw.rect(surface, (30, 30, 30), (panel_x, 0, STATS_PANEL_WIDTH, WINDOW_HEIGHT))
-
+        panel_width = STATS_PANEL_WIDTH
+        panel_height = WINDOW_HEIGHT
+        
+        # Create a separate surface for the stats panel that can be scrolled
+        stats_panel = pygame.Surface((panel_width, panel_height * 2))  # Make it twice as tall for scrolling
+        stats_panel.fill((30, 30, 30))
+        
         p_count = len(producers)
         (h_sp, h_gen, h_met, h_vis) = calc_traits_avg(herbivores)
         h_count = len(herbivores)
@@ -388,61 +417,218 @@ def run_simulation_interactive():
         (o_sp, o_gen, o_met, o_vis) = calc_traits_avg(omnivores)
         o_count = len(omnivores)
 
+        # Start drawing stats from the top of the panel
         row_y = 20
-        surf_p = main_font.render("Producers", True, (200, 200, 0))
-        surface.blit(surf_p, (panel_x + 10, row_y))
-        surf_h = main_font.render("Herbivores", True, (200, 200, 200))
-        surface.blit(surf_h, (panel_x + 80, row_y))
-        surf_c = main_font.render("Carnivores", True, (255, 100, 100))
-        surface.blit(surf_c, (panel_x + 150, row_y))
-
-        row_y += 25
-        lbl_p = main_font.render(f"# {p_count}", True, (200, 200, 0))
-        surface.blit(lbl_p, (panel_x + 20, row_y))
-
-        lbl_hc = main_font.render(f"# {h_count}", True, (200, 200, 200))
-        surface.blit(lbl_hc, (panel_x + 90, row_y))
-        lbl_hsp = main_font.render(f"Sp {h_sp:.1f}", True, (200, 200, 200))
-        surface.blit(lbl_hsp, (panel_x + 90, row_y+20))
-        lbl_hgen = main_font.render(f"Gn {h_gen:.1f}", True, (200, 200, 200))
-        surface.blit(lbl_hgen, (panel_x + 90, row_y+40))
-        lbl_hmet = main_font.render(f"Mt {h_met:.1f}", True, (200, 200, 200))
-        surface.blit(lbl_hmet, (panel_x + 90, row_y+60))
-        lbl_hvis = main_font.render(f"Vs {h_vis:.1f}", True, (200, 200, 200))
-        surface.blit(lbl_hvis, (panel_x + 90, row_y+80))
-
-        lbl_cc = main_font.render(f"# {c_count}", True, (255, 100, 100))
-        surface.blit(lbl_cc, (panel_x + 160, row_y))
-        lbl_csp = main_font.render(f"Sp {c_sp:.1f}", True, (255, 100, 100))
-        surface.blit(lbl_csp, (panel_x + 160, row_y+20))
-        lbl_cgen = main_font.render(f"Gn {c_gen:.1f}", True, (255, 100, 100))
-        surface.blit(lbl_cgen, (panel_x + 160, row_y+40))
-        lbl_cmet = main_font.render(f"Mt {c_met:.1f}", True, (255, 100, 100))
-        surface.blit(lbl_cmet, (panel_x + 160, row_y+60))
-        lbl_cvis = main_font.render(f"Vs {c_vis:.1f}", True, (255, 100, 100))
-        surface.blit(lbl_cvis, (panel_x + 160, row_y+80))
-
-        row_y2 = row_y + 120
-        surf_o = main_font.render("Omnivores", True, (255, 165, 0))
-        surface.blit(surf_o, (panel_x + 80, row_y2))
-
-        row_y2 += 25
-        lbl_oc = main_font.render(f"# {o_count}", True, (255, 165, 0))
-        surface.blit(lbl_oc, (panel_x + 90, row_y2))
-        lbl_osp = main_font.render(f"Sp {o_sp:.1f}", True, (255, 165, 0))
-        surface.blit(lbl_osp, (panel_x + 90, row_y2+20))
-        lbl_ogen = main_font.render(f"Gn {o_gen:.1f}", True, (255, 165, 0))
-        surface.blit(lbl_ogen, (panel_x + 90, row_y2+40))
-        lbl_omet = main_font.render(f"Mt {o_met:.1f}", True, (255, 165, 0))
-        surface.blit(lbl_omet, (panel_x + 90, row_y2+60))
-        lbl_ovis = main_font.render(f"Vs {o_vis:.1f}", True, (255, 165, 0))
-        surface.blit(lbl_ovis, (panel_x + 90, row_y2+80))
-
+        
+        # Simulation info
+        title_font = pygame.font.SysFont(None, 28)
+        title = title_font.render("SIMULATION INFO", True, (255, 255, 255))
+        stats_panel.blit(title, (10, row_y))
+        row_y += 30
+        
         season_now = current_season(current_step)
-        status_str = "PAUSED" if is_paused else "RUN"
-        info_str = f"Timestep: {current_step}, Season: {season_now}, [{status_str}]"
-        text_surf = main_font.render(info_str, True, (255, 255, 255))
-        surface.blit(text_surf, (panel_x + 10, WINDOW_HEIGHT - 30))
+        status_str = "PAUSED" if is_paused else "RUNNING"
+        info_lines = [
+            f"Timestep: {current_step}",
+            f"Season: {season_now}",
+            f"Status: {status_str}",
+            f"Replay Mode: {'ON' if is_replaying else 'OFF'}"
+        ]
+        
+        for line in info_lines:
+            text = main_font.render(line, True, (220, 220, 220))
+            stats_panel.blit(text, (20, row_y))
+            row_y += 20
+        
+        row_y += 20  # Extra spacing
+        
+        # Population counts section
+        title = title_font.render("POPULATION", True, (255, 255, 255))
+        stats_panel.blit(title, (10, row_y))
+        row_y += 30
+        
+        pop_lines = [
+            f"Producers: {p_count}",
+            f"Herbivores: {h_count}",
+            f"Carnivores: {c_count}",
+            f"Omnivores: {o_count}",
+            f"Total: {p_count + h_count + c_count + o_count}"
+        ]
+        
+        for line in pop_lines:
+            text = main_font.render(line, True, (220, 220, 220))
+            stats_panel.blit(text, (20, row_y))
+            row_y += 20
+            
+        row_y += 20  # Extra spacing
+        
+        # Herbivore stats section
+        title = title_font.render("HERBIVORES", True, (200, 200, 200))
+        stats_panel.blit(title, (10, row_y))
+        row_y += 30
+        
+        if h_count > 0:
+            stats_lines = [
+                f"Speed: {h_sp:.1f}",
+                f"Generation: {h_gen:.1f}",
+                f"Metabolism: {h_met:.1f}",
+                f"Vision: {h_vis:.1f}"
+            ]
+            
+            for line in stats_lines:
+                text = main_font.render(line, True, (200, 200, 200))
+                stats_panel.blit(text, (20, row_y))
+                row_y += 20
+        else:
+            text = main_font.render("None alive", True, (200, 200, 200))
+            stats_panel.blit(text, (20, row_y))
+            row_y += 20
+            
+        row_y += 20  # Extra spacing
+        
+        # Carnivore stats section
+        title = title_font.render("CARNIVORES", True, (255, 100, 100))
+        stats_panel.blit(title, (10, row_y))
+        row_y += 30
+        
+        if c_count > 0:
+            stats_lines = [
+                f"Speed: {c_sp:.1f}",
+                f"Generation: {c_gen:.1f}",
+                f"Metabolism: {c_met:.1f}",
+                f"Vision: {c_vis:.1f}"
+            ]
+            
+            for line in stats_lines:
+                text = main_font.render(line, True, (255, 100, 100))
+                stats_panel.blit(text, (20, row_y))
+                row_y += 20
+        else:
+            text = main_font.render("None alive", True, (255, 100, 100))
+            stats_panel.blit(text, (20, row_y))
+            row_y += 20
+            
+        row_y += 20  # Extra spacing
+        
+        # Omnivore stats section
+        title = title_font.render("OMNIVORES", True, (255, 165, 0))
+        stats_panel.blit(title, (10, row_y))
+        row_y += 30
+        
+        if o_count > 0:
+            stats_lines = [
+                f"Speed: {o_sp:.1f}",
+                f"Generation: {o_gen:.1f}",
+                f"Metabolism: {o_met:.1f}",
+                f"Vision: {o_vis:.1f}"
+            ]
+            
+            for line in stats_lines:
+                text = main_font.render(line, True, (255, 165, 0))
+                stats_panel.blit(text, (20, row_y))
+                row_y += 20
+        else:
+            text = main_font.render("None alive", True, (255, 165, 0))
+            stats_panel.blit(text, (20, row_y))
+            row_y += 20
+            
+        row_y += 20  # Extra spacing
+        
+        # Controls section at bottom of panel
+        title = title_font.render("CONTROLS", True, (255, 255, 255))
+        stats_panel.blit(title, (10, row_y))
+        row_y += 30
+        
+        control_lines = [
+            "P - Pause/Resume",
+            "Left/Right - Step",
+            "ESC - Menu",
+            "Mouse Wheel - Scroll Stats"
+        ]
+        
+        for line in control_lines:
+            text = main_font.render(line, True, (220, 220, 220))
+            stats_panel.blit(text, (20, row_y))
+            row_y += 20
+            
+        # Set the max scroll position based on content height
+        max_scroll_y = max(0, row_y - panel_height + 20)  # Add some padding at the bottom
+        
+        # Adjust stats_scroll_y to be within bounds
+        stats_scroll_y = max(0, min(stats_scroll_y, max_scroll_y))
+        
+        # Draw scroll indicators if needed
+        if max_scroll_y > 0:
+            # Draw up arrow if not at top
+            if stats_scroll_y > 0:
+                pygame.draw.polygon(stats_panel, (200, 200, 200), 
+                                   [(panel_width - 15, 20), (panel_width - 5, 20), (panel_width - 10, 10)])
+            
+            # Draw down arrow if not at bottom
+            if stats_scroll_y < max_scroll_y:
+                pygame.draw.polygon(stats_panel, (200, 200, 200), 
+                                   [(panel_width - 15, panel_height - 20), (panel_width - 5, panel_height - 20), 
+                                    (panel_width - 10, panel_height - 10)])
+        
+        # Blit the visible portion of the stats panel to the main surface
+        surface.blit(stats_panel, (panel_x, 0), (0, stats_scroll_y, panel_width, panel_height))
+        
+        # Add a dividing line between simulation and stats panel
+        pygame.draw.line(surface, (100, 100, 100), (panel_x, 0), (panel_x, panel_height), 2)
+
+    # Add a restart function to reset the simulation
+    def restart_simulation():
+        nonlocal current_step, is_paused, is_replaying, producers, herbivores, carnivores, omnivores, environment, history
+        
+        print("Restarting simulation...")
+        # Reset step counter and flags
+        current_step = 0
+        is_paused = False
+        is_replaying = False
+        
+        # Clear history except for the initial state
+        initial_state = history[0] if history else None
+        history = []
+        
+        # Reset environment
+        environment = np.full((GRID_WIDTH, GRID_HEIGHT), INITIAL_NUTRIENT_LEVEL)
+        
+        # Clear and reinitialize organism lists
+        producers = []
+        herbivores = []
+        carnivores = []
+        omnivores = []
+        
+        # Re-initialize organisms
+        for _ in range(INITIAL_PRODUCERS):
+            px = random.randint(0, GRID_WIDTH - 1)
+            py = random.randint(0, GRID_HEIGHT - 1)
+            pen = random.randint(*PRODUCER_INIT_ENERGY_RANGE)
+            producers.append(Producer(px, py, pen))
+            
+        for _ in range(INITIAL_HERBIVORES):
+            hx = random.randint(0, GRID_WIDTH - 1)
+            hy = random.randint(0, GRID_HEIGHT - 1)
+            hen = random.randint(*HERBIVORE_INIT_ENERGY_RANGE)
+            herbivores.append(Herbivore(hx, hy, hen))
+            
+        for _ in range(INITIAL_CARNIVORES):
+            cx = random.randint(0, GRID_WIDTH - 1)
+            cy = random.randint(0, GRID_HEIGHT - 1)
+            cen = random.randint(*CARNIVORE_INIT_ENERGY_RANGE)
+            carnivores.append(Carnivore(cx, cy, cen))
+            
+        for _ in range(INITIAL_OMNIVORES):
+            ox = random.randint(0, GRID_WIDTH - 1)
+            oy = random.randint(0, GRID_HEIGHT - 1)
+            oen = random.randint(*OMNIVORE_INIT_ENERGY_RANGE)
+            omnivores.append(Omnivore(ox, oy, oen))
+        
+        # Store initial state
+        store_state(history, current_step, producers, herbivores, carnivores, omnivores, environment)
+        
+        # Log initial stats
+        log_and_print_stats(0, producers, herbivores, carnivores, omnivores, writer)
 
     while running:
         # Handle events based on the current state
@@ -451,8 +637,17 @@ def run_simulation_interactive():
                 running = False
                 break
 
-            # Debug event handling
-            if event.type == pygame.KEYDOWN:
+            # Handle mouse wheel for stats panel scrolling
+            elif event.type == pygame.MOUSEWHEEL:
+                # Only scroll when mouse is over the stats panel
+                mouse_x, _ = pygame.mouse.get_pos()
+                if mouse_x > GRID_WIDTH * CELL_SIZE:
+                    stats_scroll_y -= event.y * scroll_speed  # Scroll up/down
+                    stats_scroll_y = max(0, min(stats_scroll_y, max_scroll_y))  # Clamp scrolling
+                    print(f"Scrolling stats panel: {stats_scroll_y}/{max_scroll_y}")
+            
+            # Debug event handling for key presses
+            elif event.type == pygame.KEYDOWN:
                 print(f"Key pressed: {pygame.key.name(event.key)} in state: {current_state}")
 
             # State-specific event handling
@@ -523,6 +718,13 @@ def run_simulation_interactive():
                         print("Resuming simulation from pause menu")
                         current_state = SIMULATION
                         is_paused = False
+                    elif event.key == pygame.K_ESCAPE:
+                        print("Returning to simulation from pause menu")
+                        current_state = SIMULATION
+                    elif event.key == pygame.K_x:
+                        print("Restarting simulation")
+                        restart_simulation()
+                        current_state = SIMULATION
                     elif event.key == pygame.K_o:
                         print("Opening options from pause menu")
                         current_state = OPTIONS_MENU
@@ -530,7 +732,7 @@ def run_simulation_interactive():
                     elif event.key == pygame.K_m:
                         print("Returning to main menu from pause menu")
                         current_state = MAIN_MENU
-                    elif event.key == pygame.K_q or event.key == pygame.K_ESCAPE:
+                    elif event.key == pygame.K_q:
                         print("Quitting from pause menu")
                         running = False
 
@@ -617,10 +819,11 @@ def run_simulation_interactive():
             
             small_font = pygame.font.SysFont(None, 32)
             menu_items = [
-                "[R/P] Resume",
+                "[R/P/ESC] Resume",
+                "[X] Restart Simulation",
                 "[O] Options",
                 "[M] Main Menu",
-                "[Q/ESC] Quit"
+                "[Q] Quit"
             ]
             y = 200
             for item in menu_items:
