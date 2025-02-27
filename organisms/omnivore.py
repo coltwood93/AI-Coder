@@ -10,7 +10,14 @@ from utils.constants import (
 from utils.toolbox import toolbox
 
 class Omnivore:
+    # Class variable to track organism IDs
     next_id = 0
+    
+    @classmethod
+    def reset_id_counter(cls):
+        """Reset the ID counter to 0."""
+        cls.next_id = 0
+
     """
     NEW SPECIES: can eat both producers AND herbivores.
     Gains EAT_GAIN_OMNIVORE_PLANT from producers, EAT_GAIN_OMNIVORE_ANIMAL from herbivores.

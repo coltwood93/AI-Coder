@@ -10,7 +10,14 @@ from utils.constants import (
 from utils.toolbox import toolbox
 
 class Carnivore:
+    # Class variable to track organism IDs
     next_id = 0
+    
+    @classmethod
+    def reset_id_counter(cls):
+        """Reset the ID counter to 0."""
+        cls.next_id = 0
+
     def __init__(self, x, y, energy=10, genes=None, generation=0):
         self.x = x
         self.y = y

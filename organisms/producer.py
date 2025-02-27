@@ -6,7 +6,14 @@ from utils.constants import (
 )
 
 class Producer:
+    # Class variable to track organism IDs
     next_id = 0
+    
+    @classmethod
+    def reset_id_counter(cls):
+        """Reset the ID counter to 0."""
+        cls.next_id = 0
+
     def __init__(self, x, y, energy=10):
         self.x = x
         self.y = y

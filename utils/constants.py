@@ -1,98 +1,100 @@
+"""
+Constants for the A-Life simulation.
+
+These are the default values from old_constants.py to maintain original behavior.
+"""
+
 import pygame
 
-# Desired minimum window dimensions
-MIN_WINDOW_WIDTH = 800
-MIN_WINDOW_HEIGHT = 600
+# Fixed window dimensions (new fixed size)
+WINDOW_WIDTH = 1024
+WINDOW_HEIGHT = 720
 
-# Grid dimensions (number of cells)
-GRID_WIDTH, GRID_HEIGHT = 20, 20
+# Grid dimensions (logical grid size)
+GRID_WIDTH = 20
+GRID_HEIGHT = 20
 
-# Calculate cell size to fit at least the minimum window dimensions
-# but maintain proportionality
-BASE_CELL_SIZE = 20  # Default size if no stretching needed
+# Stats panel width
+STATS_PANEL_WIDTH = 250
 
-# Calculate what cell size would be needed to reach minimum dimensions
-width_cell_size = MIN_WINDOW_WIDTH / GRID_WIDTH
-height_cell_size = MIN_WINDOW_HEIGHT / GRID_HEIGHT
+# Calculate display dimensions
+GRID_DISPLAY_WIDTH = WINDOW_WIDTH - STATS_PANEL_WIDTH
+GRID_DISPLAY_HEIGHT = WINDOW_HEIGHT
 
-# Use the larger of the two to ensure we meet or exceed both minimum dimensions
-CELL_SIZE = max(BASE_CELL_SIZE, width_cell_size, height_cell_size)
+# Calculate cell size dynamically to fit the grid into the available space
+CELL_SIZE_X = GRID_DISPLAY_WIDTH / GRID_WIDTH
+CELL_SIZE_Y = GRID_DISPLAY_HEIGHT / GRID_HEIGHT
+CELL_SIZE = min(CELL_SIZE_X, CELL_SIZE_Y)  # Keep cells square by using the smaller dimension
 
-STATS_PANEL_WIDTH = 220
-WINDOW_WIDTH = int(GRID_WIDTH * CELL_SIZE + STATS_PANEL_WIDTH)
-WINDOW_HEIGHT = int(GRID_HEIGHT * CELL_SIZE)
-
-# Producers
+# Initial organism counts
 INITIAL_PRODUCERS = 15
+INITIAL_HERBIVORES = 10
+INITIAL_CARNIVORES = 10 
+INITIAL_OMNIVORES = 3
+
+# Energy ranges for initialization
+PRODUCER_INIT_ENERGY_RANGE = (5, 15)
+HERBIVORE_INIT_ENERGY_RANGE = (5, 25)
+CARNIVORE_INIT_ENERGY_RANGE = (15, 35)
+OMNIVORE_INIT_ENERGY_RANGE = (5, 25)
+
+# Energy dynamics
 PRODUCER_ENERGY_GAIN = 0.3
 PRODUCER_MAX_ENERGY = 30
 PRODUCER_SEED_COST = 2
 PRODUCER_SEED_PROB = 0.18
-PRODUCER_INIT_ENERGY_RANGE = (5, 15)
-PRODUCER_NUTRIENT_CONSUMPTION = 0.1
 
-# Herbivores
-INITIAL_HERBIVORES = 10
-HERBIVORE_INIT_ENERGY_RANGE = (5, 25)
+EAT_GAIN_HERBIVORE = 6
+EAT_GAIN_CARNIVORE = 10
+EAT_GAIN_OMNIVORE_PLANT = 3
+EAT_GAIN_OMNIVORE_ANIMAL = 5
+
 HERBIVORE_REPRO_THRESHOLD = 26
-EAT_GAIN_HERBIVORE = 6  # Gains when eating producers
-
-# Carnivores
-INITIAL_CARNIVORES = 10
-CARNIVORE_INIT_ENERGY_RANGE = (15, 35)
 CARNIVORE_REPRO_THRESHOLD = 27
-EAT_GAIN_CARNIVORE = 10  # Gains when eating herbivores
-
-# Omnivores
-INITIAL_OMNIVORES = 3
-OMNIVORE_INIT_ENERGY_RANGE = (5, 25)
 OMNIVORE_REPRO_THRESHOLD = 28
-EAT_GAIN_OMNIVORE_PLANT = 3  # Gains when eating producers
-EAT_GAIN_OMNIVORE_ANIMAL = 5 # Gains when eating herbivores
 
-# Additional Realism
 MAX_LIFESPAN_HERBIVORE = 300
 MAX_LIFESPAN_CARNIVORE = 250
 MAX_LIFESPAN_OMNIVORE = 280
+
 REPRODUCTION_COOLDOWN = 10
 
-# Energy & Movement
+# Environment dynamics
 BASE_LIFE_COST = 1.5
 MOVE_COST_FACTOR = 0.3
+CRITICAL_ENERGY = 8
+DISCOVERY_BONUS = 0.2
+TRACK_CELL_HISTORY_LEN = 20
 
-# Genes & Mutation
+NUTRIENT_DECAY_RATE = 0.01
+NUTRIENT_DIFFUSION_RATE = 0.1
+INITIAL_NUTRIENT_LEVEL = 0.5
+PRODUCER_NUTRIENT_CONSUMPTION = 0.1
+CONSUMER_NUTRIENT_RELEASE = 0.5
+
+# Seasons and Disease
+SEASON_LENGTH = 50
+DISEASE_CHANCE_PER_TURN = 0.01
+DISEASE_DURATION = 40
+DISEASE_ENERGY_DRAIN_MULTIPLIER = 1.3
+
+# Spawning
+BASE_SPAWN_CHANCE_PER_TURN = 0.15
+WINTER_SPAWN_MULT = 0.5
+SUMMER_SPAWN_MULT = 1.2
+
+# Game controls
+PAUSE_KEY = pygame.K_p
+STEP_BACK_KEY = pygame.K_LEFT
+STEP_FORWARD_KEY = pygame.K_RIGHT
+
+# Simulation limits
+MAX_TIMESTEPS = 400
+FPS = 6
+SIMULATION_SPEED = 1.0  # Run at full speed (no slowdown)
+
+# Genetics & Mutation
 MUTATION_RATE = 0.1
 SPEED_RANGE = (0, 5)
 METABOLISM_RANGE = (0.5, 2.0)
 VISION_RANGE = (1, 3)
-
-# Seasons
-SEASON_LENGTH = 50   # Switch every 50 timesteps
-
-# Disease System
-DISEASE_CHANCE_PER_TURN = 0.01  # 1% chance each turn for disease event
-DISEASE_ENERGY_DRAIN_MULTIPLIER = 1.3  # If infected, life cost goes up 30%
-DISEASE_DURATION = 40  # Ticks an infected animal remains infected
-
-# Misc
-CRITICAL_ENERGY = 8     # Force random movement if below this
-DISCOVERY_BONUS = 0.2
-TRACK_CELL_HISTORY_LEN = 20
-MAX_TIMESTEPS = 400
-FPS = 6
-
-# Random border spawn
-BASE_SPAWN_CHANCE_PER_TURN = 0.15  # nominal spawn chance
-WINTER_SPAWN_MULT = 0.5            # e.g., in winter 1/2 spawn chance
-SUMMER_SPAWN_MULT = 1.2            # e.g., in summer 20% more than base
-
-# Nutrient environment
-INITIAL_NUTRIENT_LEVEL = 0.5
-NUTRIENT_DIFFUSION_RATE = 0.1
-NUTRIENT_DECAY_RATE = 0.01
-CONSUMER_NUTRIENT_RELEASE = 0.5  # Increased nutrient release
-
-# Pygame keys
-PAUSE_KEY = pygame.K_p
-STEP_BACK_KEY = pygame.K_LEFT
-STEP_FORWARD_KEY = pygame.K_RIGHT
