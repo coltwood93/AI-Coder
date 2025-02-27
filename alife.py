@@ -12,7 +12,7 @@ import numpy as np
 # Import constants needed for the main application
 from utils.constants import (
     WINDOW_WIDTH, WINDOW_HEIGHT, GRID_WIDTH, GRID_HEIGHT, CELL_SIZE, 
-    STATS_PANEL_WIDTH, FPS, SIMULATION_SPEED
+    STATS_PANEL_WIDTH, FPS, SIMULATION_SPEED, update_from_config
 )
 
 # Import app states
@@ -26,6 +26,8 @@ from simulation.manager import SimulationManager
 # Import UI components
 from ui.renderer import SimulationRenderer
 from ui.input_handler import InputHandler
+from ui.options_menu import OptionsMenu
+from utils.config_manager import ConfigManager
 
 # Set random seed for reproducibility
 random.seed()
@@ -37,6 +39,10 @@ class SimulationApp:
     """Main application controller that ties everything together."""
     
     def __init__(self):
+        # Initialize config manager first, so constants get updated
+        self.config_manager = ConfigManager()
+        update_from_config(self.config_manager)
+        
         # Initialize pygame
         pygame.init()
         self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
@@ -46,6 +52,9 @@ class SimulationApp:
         # Initialize fonts
         self.main_font = pygame.font.SysFont(None, 24)
         self.label_font = pygame.font.SysFont(None, 16)
+        
+        # Initialize options menu
+        self.options_menu = OptionsMenu(self.config_manager, self.main_font)
         
         # Setup CSV logging
         self.csvfile = open("results_interactive.csv", "w", newline="")
@@ -145,14 +154,8 @@ class SimulationApp:
             )
         
         elif self.current_state == OPTIONS_MENU:
-            return_text = "[ESC] Return to " + ("Main Menu" if self.from_main_menu else "Pause Menu")
-            self.renderer.render_menu(
-                "options_menu",
-                [return_text, "[Q] Quit"],
-                "OPTIONS",
-                background_color=(30, 30, 30),
-                title_color=(200, 200, 200)
-            )
+            # Use the options menu renderer instead of the generic menu
+            self.renderer.render_options_menu(self.options_menu)
         
         elif self.current_state == SIMULATION:
             self._render_simulation()
@@ -171,7 +174,7 @@ class SimulationApp:
             ])
         
         elif self.current_state == STATS_VIEW:
-            # Use the new stats view renderer
+            # Use the stats view renderer
             self.renderer.render_stats_view(self.simulation)
     
     def _render_simulation(self):

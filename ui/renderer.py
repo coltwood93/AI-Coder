@@ -129,6 +129,10 @@ class SimulationRenderer:
         instructions_rect = instructions_surf.get_rect(midbottom=(WINDOW_WIDTH // 2, WINDOW_HEIGHT - 10))
         self.screen.blit(instructions_surf, instructions_rect)
     
+    def render_options_menu(self, options_menu):
+        """Render the options menu."""
+        options_menu.render(self.screen)
+    
     # Private rendering methods
     def _render_environment(self, environment):
         """Render the nutrient environment grid."""

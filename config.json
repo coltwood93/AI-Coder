@@ -1,0 +1,16 @@
+{
+  "grid": {
+    "width": 20,
+    "height": 20
+  },
+  "initial_counts": {
+    "producers": 15,
+    "herbivores": 10,
+    "carnivores": 10,
+    "omnivores": 3
+  },
+  "simulation": {
+    "speed": 1.0,
+    "fps": 15
+  }
+}

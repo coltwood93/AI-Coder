@@ -82,13 +82,25 @@ class InputHandler:
     
     def _handle_options_menu_input(self, event, from_main_menu):
         """Handle input in the options menu state."""
+        app = self._find_app_instance()
+        
         if event.key == pygame.K_ESCAPE:
-            next_state = MAIN_MENU if from_main_menu else PAUSE_MENU
-            print(f"Returning from options to {next_state}")
-            return next_state, from_main_menu, True
-        elif event.key == pygame.K_q:
+            # Exit options menu if no option is being edited
+            if not app.options_menu.editing:
+                next_state = MAIN_MENU if from_main_menu else PAUSE_MENU
+                print(f"Returning from options to {next_state}")
+                return next_state, from_main_menu, True
+        elif event.key == pygame.K_q and not app.options_menu.editing:
             print("Quitting from options menu")
             return None, None, False  # Signal to quit
+        else:
+            # Pass the keypress to the options menu
+            if app and hasattr(app, 'options_menu'):
+                exit_options = app.options_menu.handle_key(event.key)
+                if exit_options:
+                    next_state = MAIN_MENU if from_main_menu else PAUSE_MENU
+                    print(f"Returning from options to {next_state}")
+                    return next_state, from_main_menu, True
         return None  # No state change
     
     def _handle_simulation_input(self, event, from_main_menu):
