@@ -31,13 +31,20 @@ def test_producer_nutrient_consumption(basic_producer):
     nutrients_consumed = min(initial_nutrients, PRODUCER_NUTRIENT_CONSUMPTION)
     energy_gain = nutrients_consumed * PRODUCER_ENERGY_GAIN
     
+    # Control seeding attempts by mocking random
+    original_random = random.random
+    random.random = lambda: 1.0  # Never seed
+    
     # Update producer to consume nutrients
     basic_producer.update([], [], [], [], environment)
+    
+    # Restore random
+    random.random = original_random
     
     # Should have consumed nutrients from environment
     assert environment[5, 5] == initial_nutrients - nutrients_consumed
     
-    # Energy should have increased by nutrient gain
+    # Energy should match initial + gain (since we prevented seeding)
     assert abs(basic_producer.energy - (initial_energy + energy_gain)) < 0.001
 
 def test_producer_energy_cap(basic_producer):
