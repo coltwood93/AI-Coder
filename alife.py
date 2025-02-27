@@ -14,12 +14,21 @@ Features:
 import sys
 import random
 import copy
-import math
 import csv
 import pygame
 import numpy as np
-from utils.constants import *
-from utils.toolbox import toolbox
+from utils.constants import (
+    GRID_WIDTH, GRID_HEIGHT, CELL_SIZE, STATS_PANEL_WIDTH, WINDOW_WIDTH, WINDOW_HEIGHT,
+    INITIAL_PRODUCERS, PRODUCER_INIT_ENERGY_RANGE,  
+    INITIAL_HERBIVORES, HERBIVORE_INIT_ENERGY_RANGE,
+    INITIAL_CARNIVORES, CARNIVORE_INIT_ENERGY_RANGE,
+    INITIAL_OMNIVORES, OMNIVORE_INIT_ENERGY_RANGE,
+    SEASON_LENGTH, DISEASE_CHANCE_PER_TURN, DISEASE_DURATION,
+    NUTRIENT_DECAY_RATE, NUTRIENT_DIFFUSION_RATE, INITIAL_NUTRIENT_LEVEL,
+    CONSUMER_NUTRIENT_RELEASE, MAX_TIMESTEPS, FPS,
+    PAUSE_KEY, STEP_BACK_KEY, STEP_FORWARD_KEY,
+    BASE_SPAWN_CHANCE_PER_TURN, WINTER_SPAWN_MULT, SUMMER_SPAWN_MULT
+)
 from memory_storage import MemoryResidentSimulationStore
 from hdf5_storage import HDF5Storage
 from organisms.producer import Producer
