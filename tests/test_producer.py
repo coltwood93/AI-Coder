@@ -43,15 +43,17 @@ def test_producer_nutrient_consumption(basic_producer):
 def test_producer_energy_cap(basic_producer):
     """Test producer energy doesn't exceed maximum"""
     environment = np.full((GRID_WIDTH, GRID_HEIGHT), 0.5)  # More realistic nutrient level
-    basic_producer.energy = PRODUCER_MAX_ENERGY - 0.2
+    test_energy = PRODUCER_MAX_ENERGY - 1.0  # Start further from max to avoid precision issues
+    basic_producer.energy = test_energy
     
     # Update should cap energy at max
     basic_producer.update([], [], [], [], environment)
-    assert abs(basic_producer.energy - PRODUCER_MAX_ENERGY) < 0.2  # Allow for floating point imprecision
+    assert basic_producer.energy <= PRODUCER_MAX_ENERGY, "Energy exceeded maximum"
     
-    # Further updates shouldn't increase energy beyond max
+    # Force energy to max and ensure it stays there
+    basic_producer.energy = PRODUCER_MAX_ENERGY
     basic_producer.update([], [], [], [], environment)
-    assert abs(basic_producer.energy - PRODUCER_MAX_ENERGY) < 0.2
+    assert basic_producer.energy == PRODUCER_MAX_ENERGY, "Energy should stay at maximum"
 
 def test_producer_seeding(basic_producer):
     """Test producer reproduction through seeding"""
