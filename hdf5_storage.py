@@ -12,7 +12,7 @@ class HDF5Storage:
             print(f"Existing file '{self.filepath}' removed.")
     
     def create_empty_file(self):
-        with h5py.File(self.filepath, "w") as f:
+        with h5py.File(self.filepath, "w"):
             pass
     
     def _to_python_scalars(self, obj_dict):

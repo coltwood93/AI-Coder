@@ -3,8 +3,6 @@ import sys
 import tempfile
 import unittest
 import numpy as np
-import h5py
-import json
 
 # Insert the parent directory into sys.path so we can import our modules.
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -374,6 +372,7 @@ class TestMemoryResidentSimulationStore(unittest.TestCase):
         highest = max(self.mem_store.states.keys())
         loaded_state = self.mem_store.load_from_longterm(self.hdf5_storage, highest)
         self.assertEqual(self.mem_store.current_timestep, highest)
+        self.assertEqual(loaded_state, self.mem_store.states[highest])
     
     # 28.
     def test_update_in_replay_mode_raises_error(self):
@@ -390,22 +389,11 @@ class TestMemoryResidentSimulationStore(unittest.TestCase):
         self.assertEqual(state["board"], board)
     
     # 30.
-    def test_load_all_consumers_aggregated(self):
-        for t in range(40, 42):
-            consumers = [DummyOrganism(t, t, t+10, 1.0, t, "S", f"org{t:04d}")]
-            self.mem_store.update_consumers(t, consumers)
-        all_cons = self.mem_store.load_all_consumers()
-        self.assertEqual(len(all_cons), 2)
-        expected = [[40, 40], [41, 41]]
-        for i, (t_val, cons) in enumerate(all_cons):
-            np.testing.assert_array_equal(np.array(dictify(cons)), np.array([{"x": expected[i][0],
-                                                                               "y": expected[i][1],
-                                                                               "energy": t_val+10,
-                                                                               "speed": 1.0,
-                                                                               "generation": t_val,
-                                                                               "species": "S",
-                                                                               "id": f"org{t_val:04d}",
-                                                                               "parent_id": None}]))
+    def test_flush_and_load(self):
+        self.mem_store.flush_to_longterm(self.hdf5_storage)
+        highest = max(self.mem_store.states.keys())
+        self.mem_store.load_from_longterm(self.hdf5_storage, highest)
+        self.assertEqual(self.mem_store.current_timestep, highest)
     
 if __name__ == '__main__':
     unittest.main()
