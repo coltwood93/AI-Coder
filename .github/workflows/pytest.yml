@@ -43,7 +43,11 @@ jobs:
         pytest tests/ -v --cov=./ --cov-report=xml
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       with:
         file: ./coverage.xml
-        fail_ci_if_error: true
+        fail_ci_if_error: false  # Don't fail CI if upload fails
+        retry_max_attempts: 3    # Retry upload up to 3 times
+        retry_delay_seconds: 30  # Wait 30 seconds between retries
