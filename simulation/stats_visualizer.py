@@ -20,7 +20,7 @@ class SimulationGraphRenderer:
         }
         
     def render_population_history(self, surface, history_data, rect, 
-                                max_steps_to_show=100, title="Population History"):
+                                max_steps_to_show=100, title="Animal Population History"):
         """
         Render a line graph showing population changes over time.
         
@@ -53,14 +53,14 @@ class SimulationGraphRenderer:
         
         # Extract data series
         steps = [entry['step'] for entry in history_data]
-        producers = [entry['producers'] for entry in history_data]
+        # We're no longer plotting producers in the graph
+        # producers = [entry['producers'] for entry in history_data]
         herbivores = [entry['herbivores'] for entry in history_data]
         carnivores = [entry['carnivores'] for entry in history_data]
         omnivores = [entry['omnivores'] for entry in history_data]
         
-        # Calculate max value for y-axis
+        # Calculate max value for y-axis (excluding producers)
         max_value = max([
-            max(producers) if producers else 0,
             max(herbivores) if herbivores else 0, 
             max(carnivores) if carnivores else 0,
             max(omnivores) if omnivores else 0
@@ -80,7 +80,6 @@ class SimulationGraphRenderer:
         # Limit data to the last max_steps_to_show steps
         if len(history_data) > max_steps_to_show:
             steps = steps[-max_steps_to_show:]
-            producers = producers[-max_steps_to_show:]
             herbivores = herbivores[-max_steps_to_show:]
             carnivores = carnivores[-max_steps_to_show:]
             omnivores = omnivores[-max_steps_to_show:]
@@ -146,11 +145,36 @@ class SimulationGraphRenderer:
                 label_surf = self.font.render(label, True, color)
                 surface.blit(label_surf, (label_x, label_y))
         
-        # Plot each population line
-        plot_line(producers, self.colors["producers"], "Producers")
+        # Plot each population line (excluding producers)
+        # plot_line(producers, self.colors["producers"], "Producers")
         plot_line(herbivores, self.colors["herbivores"], "Herbivores")
         plot_line(carnivores, self.colors["carnivores"], "Carnivores")
         plot_line(omnivores, self.colors["omnivores"], "Omnivores")
+        
+        # Add a legend
+        legend_y = y + 20
+        legend_x = x + width - 130
+        
+        # Draw legend header
+        legend_title = self.font.render("Legend", True, (200, 200, 200))
+        surface.blit(legend_title, (legend_x, legend_y))
+        legend_y += 20
+        
+        # Draw legend items (animal types only)
+        for name, color in [
+            ("Herbivores", self.colors["herbivores"]),
+            ("Carnivores", self.colors["carnivores"]), 
+            ("Omnivores", self.colors["omnivores"])
+        ]:
+            # Draw color indicator
+            pygame.draw.line(surface, color, 
+                           (legend_x, legend_y + 5), 
+                           (legend_x + 20, legend_y + 5), 3)
+            
+            # Draw label
+            label_surf = self.font.render(name, True, color)
+            surface.blit(label_surf, (legend_x + 25, legend_y))
+            legend_y += 15
         
     def render_stats_summary(self, surface, current_stats, rect):
         """Render a summary of current statistics."""
