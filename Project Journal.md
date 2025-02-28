@@ -197,10 +197,14 @@ Final thoughts, I think this was a good warm-up sprint. I didn't get as much don
 *   Response #2: Here is why you're getting these results... Here's how you can fix it... [insert python]. Here's why this python file addresses the aforementioned concerns... [insert summary of changes]
 *   Prompt #3: This is definitely more realistic, but certain consumers are still camping on a single spot without ever moving. Are you sure plants are being culled after the consumer lands on it?
 *   Response #3: Here are your concerns: [insert understanding of problem statement]... [insert Python file]. Here's why this python file addresses the aforementioned problem statement... [insert summary of changes]
+  
 #### Reflections on AI Quality
 *   ChatGPT seems to be very good at understanding how to achieve a particular outcome. The trick is making sure it understands the desired outcome and how that differs from the current state of things.
+*   ChatGPT does a really good job of explaining code
+
 #### AI Tool Integration
 *   I continued to use the same chat within ChatGPT that I was using previously. It seemed to understand generic context but occasionally needs a reminder of what the ultimate goal is.
+
 #### Lessons Learned
 *   Human oversight is necessary to make progress. ChatGPT will always THINK it is solving the problem you provide because it doesn't always know WHY certain outputs are being created. For example, there was an incident wherein consumers (who were technically mobile) would camp out on a single producer because they could receive infinite energy and expend none. Therefore, they would reproduce and all the offspring would end up on that single square. I pointed this out to ChatGPT and prompted repeatedly for a fix; however, none of the code provided solved the problem. It responded as if it recognized the code that was causing the problematic behavior, but its solutions were ultimately insufficient. The problem was not solved until I pointed out in a single prompt that consumers can camp because producers aren't being culled AND that a producer should be culled once a consumer eats it. Only then did it provide me with code that solved the problem.
 
@@ -272,8 +276,130 @@ Final thoughts, it was a good week, feel like I am hitting my stride but also ha
 *(Example Sprint Title - this should be updated for each sprint)*
 
 ### Caleb Ingram
-... *(repeat section from Sprint 1)*
 
+#### AI Tools Used
+*   ChatGPT 4o/o1/o3-mini
+*   Gemini-Code-Assist (Github Extension)
+
+#### Tasks and Features
+* Made the spawning methods more realistic for all creatures
+* Advanced the food web by adding omnivores and carnivores. This brings about complexity wherein consumers that can be eaten (producers, omnivores) are inclined to run from those that can eat consumers (other omnivores + carnivores)
+
+
+#### Prompts and Outputs
+* Me: [after attaching the maximum 10 files that are most relevant for the code functionality] Can you explain to me how the current code works and how alife.py will execute? Several changes have been made by other people in my group, so I have attached a directory with the current 'main' branch in our repo.
+
+Here's the structure of the directory:
+
+AI CODER
+--organisms
+----__init__.py
+----carnivore.py
+----herbivore.py
+----omnivore.py
+----producer.py
+--tests
+----test_memory_storage.py
+--utils
+----constants.py
+----toolbox.py
+--alife.py
+--hdf5_storage.py
+--memory_storage.py
+--requirements.txt
+
+* ChatGPT's response:
+Below is a high-level summary of how the code in the main branch is structured and how alife.py will execute, based on your described directory layout and file roles:
+
+Directory & File Overview [gives high-level overview of each file]
+
+How alife.py Typically Executes
+
+Imports: On startup, alife.py imports items from utils (for constants, toolbox functions), from organisms (for the classes Carnivore, Herbivore, Omnivore, Producer), and from any storage modules (memory_storage.py, hdf5_storage.py), plus common libraries (random, pygame, etc.).
+    Initialization: It sets up the main simulation parameters (e.g., grid width, initial population sizes) by reading from constants.py or by using local defaults.
+    Create Populations: It spawns the initial sets of producers, herbivores, omnivores, and carnivores—likely generating random positions on the grid and random or defaulted gene sets for speed, vision, metabolism, etc.
+    Main Loop: Inside the loop:
+        Each organism’s update() method is called (for example, carnivore.update(...)) so it can move, eat, reproduce, or die.
+        The environment might be updated if you track resources or seasons.
+        The storage modules (memory_storage or hdf5_storage) could record snapshots of the population each turn, so you can load or replay states.
+        If you have a Pygame window, alife.py updates the display by drawing the grid, the organisms, and any UI elements.
+        The loop continues until you reach a maximum number of steps, or until all organisms die, or some other stopping condition.
+    Logging & End: Each time step might log statistics—like population counts or average speeds—to a CSV or your memory/hdf5 storage, so you can analyze them later. When the run ends, alife.py closes everything gracefully and writes final data if needed.
+
+Recent Changes
+[summarizes changes implemented by team members]
+
+Summary
+[summarizes flow of alife.py]
+
+
+* Me: Can you walk me through exactly how alife.py executes? If it calls another file, please explain thoroughly the relevant pieces of that file then return to the walkthrough of alife.py
+
+*ChatGPT: 
+Below is a step-by-step explanation of how alife.py generally executes, including where it calls into other files (like the ones in organisms/ or your storage utilities) and what parts of those files matter, then returning to what happens next in alife.py. The exact function or class names may vary slightly, but here’s the typical flow and references:
+
+1. Initialization & Imports (Inside alife.py)
+
+    Imports:
+        [detailed description of all imports and underlying logic]
+
+    Global or Constant Setup:
+        [detailed description of constants and how they are introduced into the program]
+
+2. Main Entry Point
+
+Inside alife.py, you typically have:
+
+if __name__ == "__main__":
+    run_simulation_interactive()  # or main(), or whichever function starts everything
+
+That means when you run python alife.py, Python looks here and calls your primary function (e.g., run_simulation_interactive()).
+
+3. Creating the Environment & Populations
+
+[explains initial state of simulation and hdf5 memory in detail]
+
+
+4. The Main Simulation Loop
+[detailed description of main simulation and where/how files other than alife.py are used]
+
+
+5. Pygame & Final Steps
+
+    If the simulation is interactive, alife.py sets up a Pygame window:
+        The loop might call a function like draw_grid(screen, environment, producers, herbivores, carnivores, omnivores) to visualize the environment and each organism.
+        Key or mouse events might be handled to pause, step backward/forward if a memory-based time travel is implemented.
+    Once the loop finishes (reaching MAX_TIMESTEPS or no organisms left), alife.py closes the store and files, possibly writes a final message, and quits.
+
+Overall Flow Summary
+
+    alife.py starts, imports from organisms/ and utils/.
+    It creates the environment (a 2D array or nutrient grid) and initializes populations by calling each organism’s constructor from their respective file.
+    It runs a main loop, each iteration calling producer.update(...), herbivore.update(...), carnivore.update(...), omnivore.update(...). These methods are all defined in producer.py, herbivore.py, carnivore.py, and omnivore.py. They handle movement, eating, reproduction, or dying.
+    After updating all species, alife.py calls update_environment(...) if you have resource diffusion or decay.
+    If configured, it stores the new state in memory or HDF5 by calling methods from memory_storage.py or hdf5_storage.py.
+    If interactive, it draws everything on the Pygame window and checks user input.
+    The loop ends after a condition (time limit or all species extinct), and alife.py cleans up, closing any open files or logs.
+
+With these steps, alife.py orchestrates the entire simulation: it calls code in the other files for organism logic, for storage and for utils. Once it’s done, the final data (like CSV logs or HDF5 snapshots) remains for analysis or replay.
+
+
+
+#### Reflections on AI Quality
+* Having an ongoing chat with ChatGPT has been extremely positive overall. While its memory is not perfect in that it does not always remember the goal, it is still an utter convenience.
+* The code provided by ChatGPT is not remarkably advanced. Though it is a long program with much happening, little to nothing therein is particularly "clever".
+* ChatGPT is really good at breaking down how code works!
+* Github's Gemini-Code-Assist extension is GREAT. Although our codebase is long, it clearly summarizes any changes and recommends relevant improvements. This is hugely helpful BECAUSE there can be so much code to review. While this may bias the reviewer to only see what the AI sees, the feedback it does give is high quality. 
+
+#### AI Tool Integration
+* I have continued to use the same chat or two that I have been using all term. It works great for the most part. One big flaw is that when somebody else adds to the codebase, it takes work to get ChatGPT to put that in its memory.
+* Github's Gemini-Code-Assist extension has proved very useful for code reviews. 
+
+#### Lessons Learned
+* Mr. GPT is not very skilled at incorporating changes that it did not introduce itself. Even giving ChatGPT the entire codebase, it tends to think that the latest version is the most recent one that it created.
+   * To mitigate this problem, I ask the bot to explain in detail how the current codebase works. After priming the bot in that way, prompting it to change something or add a feature seems to yield fewer dropped details.
+
+  
 ### Colton Woodruff
 
 #### AI Tools Used
