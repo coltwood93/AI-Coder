@@ -437,7 +437,87 @@ With these steps, alife.py orchestrates the entire simulation: it calls code in 
 *   **Iterative Prompting with Focused Scope is Crucial:** Combining iterative refinement of prompts with a narrow focus (e.g., single file or function group) is essential for maximizing the effectiveness of Github Agent, particularly for complex tasks like test generation. The ability to move a conversation from Chat to Agent within the Github Copilot extension is highly effective.
 
 ### Tycin Wood
-... *(repeat section from Sprint 1)*
+
+#### AI Tools Used
+*   Github Copilot (on github)
+*   Github Copilot Chat w/ Claude 3.7 Sonnet, GPT-4o, Gemini 2.0 flash, o1 (in VSCode)
+*   ChatGPT 4o, 1o (web)
+
+#### Tasks and Features
+*   Worked through merge of expanding types of organisms with existing storage methodology and improved storage to be more dynamic and resilient to change.
+*   Created a menu system to better navigate the simulation and give some polish
+*   Implemented initial options menu to modify simulation start conditions
+*   Generated initial statistics page with some stats to better visualize changes over time to the simulation.
+
+#### Prompts and Outputs
+*   **Comment:**  Keeping in the nature of this project, I asked Copilot for a summary of prompts it felt moved the project forward the most. Below is what it said.
+
+During our chat, several crucial prompts significantly advanced the AI-Coder project. Here's a summary of the most impactful contributions:
+
+1. Adding the Stats View Screen
+
+You requested:
+"I want to add another state that can be opened off of the simulation pause menu that is tentatively called stats. I don't want to do anything with it yet, just want the state made."
+
+This created a fundamental new feature by:
+*   Adding the STATS_VIEW state to app_states.py
+*   Implementing input handling for the new state
+*   Creating UI navigation between pause menu and stats view
+
+2. Historical Population Graph
+
+You requested:
+"I want to display a historical graph of the simulation from beginning to current step on the stats page, whether the step is a live or replay step."
+
+This dramatically improved data visualization by implementing:
+*   SimulationGraphRenderer class for statistical visualization
+*   Population history tracking in SimulationManager
+*   Line graph visualization of population changes over time
+*   Stats summary table beneath the graph
+
+3. Graph Refinement
+
+You requested:
+"Please remove producers from the graph but leave it on the current stats section."
+
+This optimized the visualization by:
+*   Focusing the graph on animal populations only
+*   Adding a legend to explain graph elements
+*   Keeping producers in the statistics table for reference
+*   Making the graph more readable and focused
+
+4. Configurable Simulation Settings
+
+You requested:
+"I want to add option to the main menu options menu to modify the grid size and the number of starting organisms for each type. I also want to add an option to change the speed of the simulation."
+
+This created a complete configuration system including:
+*   ConfigManager for saving/loading user preferences
+*   Interactive options menu UI
+*   Editable settings for grid size, organism counts, and simulation speed
+*   Persistent configuration between runs
+
+5. Code Structure and Documentation
+
+While not explicitly requested, we added:
+*   Comprehensive docstrings to all major classes and methods
+*   Cleaner code organization across modules
+*   Clear separation of responsibilities between components
+*   Improved input handling with dedicated state management
+
+#### Reflections on AI Quality
+*   **ChatGPT:**  I found this week it becoming unwieldy very quickly with how I was trying to work on the project with either prompts taking many minutes to complete or it went off the mark and was borderline useless
+*   **Copilot in VSCode:** This was absolutely a massive game changer and I am genuinely impressed. This is less the actual quality of the AI itself but commentary on the quality of the integration. Some models had issues of the prompt breaking if it was running too long, but that appeared to be api throttling issues. 
+*   **Copilot in Gihub:** It has worked fine so far, good for quick summaries. No further comments on it. 
+
+#### AI Tool Integration
+*   I finally integrated Copilot in VSCode into my workflow and it was seriously a game changer. I was trying to use a chatgpt project to manage the entire project and not only would it take an extremely long amount of time for ChatGPT to work through, it also lost the plot multiple times and just became unwieldy. Colton brought up his experience with Copilot so I gave it a shot and immediately I was able to push through with changes where it had direct access to the code and propose changes directly. I was able to get through merging two massive branches and got a ton of work done on the UI in the time I had the past week to work on the project. I told it I wanted to add options to a specific state in the simulation program and one round of modification and one bug fix it was working perfectly. I think this is the first time this project I have been absolutely blown away. 
+
+#### Lessons Learned
+*   **Don't expect nuance:** Trying to get the AI to implement a merge was the worst idea and experience I have had in this project. Due to not thinking ahead, the data structures I had implemented were not dynamic enough to handle changes to the main codebase. I branched a feature branch to work on fixing it and in the process of merging the expanded organism branch and the one that had the data structures, I had the bright idea to have the AI just do the merge from within VSCode using copilot. It fundamentally was not able to figure out which feature was needed to be kept and which ones were redundant so I ended up with classes in the main script but then also had the classes in the files that I had moved the classes to so I could break up the app to make it more modular. That leads to my next point.
+*   **Details can make or break a prompt** I got trapped in a few loops where I would tell copilot very plainly what was wrong. Multiple times it made a single line change and told me it was fixed. I was probably not in the right mood but I really had issues not getting frustrated and kept giving short but pointed comments on what was still wrong. I finally got frustrated enough that I typed a very large block of how things should work and then it went through and was able to fix a bunch of little items that made the program work again. I ran into that same situation a few times but was much quicker to recognize I was getting too basic with my prompts. 
+*   **Chose the right tool for the job** This already got mentioned last week but it carried over into this week quite a bit. Using Copilot in VSCode was a huge boost to my productivity and I came to realize that I needed to be deliberate with which models I chose when trying to make changes to the program. I really found that for example that o1 was much better at handling large changes that required either a lot of lines of code or a lot of files modified to get to a good end results but it is rate limited so only a small usage everyday and it can take a long time with how large the project is getting. On the other hand, GPT-4o could handle very minor changes but was very quick. Claude 3.7 would be able to handle the middle ground very well, but it was always a risk because there were times where it would hit prompt limit mid modification which left me either asking it to continue and hoping it picked up where it was at or discard the changes. 
+
 
 ## Project Archive - Final
 
