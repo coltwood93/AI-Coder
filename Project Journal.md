@@ -182,7 +182,6 @@ Final thoughts, I think this was a good warm-up sprint. I didn't get as much don
 
 
 ## Sprint 2: Simulation and Visual Elements
-**
 
 ### Caleb Ingram
 #### AI Tools Used
@@ -273,7 +272,6 @@ Final thoughts, it was a good week, feel like I am hitting my stride but also ha
 
 
 ## Sprint 3: Optimization and Challenges
-*(Example Sprint Title - this should be updated for each sprint)*
 
 ### Caleb Ingram
 
