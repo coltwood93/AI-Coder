@@ -1,43 +1,40 @@
 #!/usr/bin/env python3
 """
-Test runner script for the A-Life project.
-Discovers and runs all tests, handling both unittest and pytest styles.
+Run all tests for the A-Life project.
 """
-
-import unittest
 import sys
 import os
+import unittest
+import importlib
 
-def run_tests():
-    """
-    Discover and run all tests in the tests/ directory.
-    """
-    # Ensure the project root is in the Python path
-    sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
-    
-    print("====================================")
+def run_all_tests():
+    """Run all tests in the tests directory."""
+    print("=" * 36)
     print("Running all tests for A-Life Project")
-    print("====================================")
+    print("=" * 36)
     
-    # Use the test discovery mechanism
-    test_loader = unittest.defaultTestLoader
-    test_loader.testMethodPrefix = "test"  # Default prefix for test methods
+    # Add the project root to the Python path
+    root_dir = os.path.dirname(os.path.abspath(__file__))
+    sys.path.insert(0, root_dir)
     
-    # Discover tests in the tests directory
+    # Discover and run all tests
+    test_loader = unittest.TestLoader()
     test_suite = test_loader.discover('tests', pattern='test_*.py')
-    test_runner = unittest.TextTestRunner(verbosity=2)
-    result = test_runner.run(test_suite)
     
-    # Print summary
-    print("\n====================================")
-    print(f"Tests run: {result.testsRun}")
-    print(f"Errors: {len(result.errors)}")
-    print(f"Failures: {len(result.failures)}")
-    print(f"Skipped: {len(result.skipped)}")
-    print("====================================")
+    # Run the tests
+    result = unittest.TextTestRunner(verbosity=1).run(test_suite)
     
-    # Return appropriate exit code based on test results
+    # Return success if all tests passed
     return 0 if result.wasSuccessful() else 1
 
 if __name__ == "__main__":
-    sys.exit(run_tests())
+    # Initialize pygame first to avoid issues
+    try:
+        import pygame
+        pygame.init()
+        print(f"{pygame.version.ver} (SDL {pygame.version.SDL})")
+        print(f"Hello from the pygame community. https://www.pygame.org/contribute.html")
+    except ImportError:
+        print("Pygame not found - some tests might fail.")
+    
+    sys.exit(run_all_tests())
