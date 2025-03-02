@@ -1,22 +1,42 @@
 """
-State history management for the A-Life simulation.
+Manages the history of simulation states for replay and analysis.
 """
 
-import copy
 import numpy as np
+import copy
 
 class SimulationState:
     """
-    Class to store a complete state of the simulation, 
-    including all organisms and environment.
+    Represents a snapshot of the simulation state at a point in time.
     """
     def __init__(self, t, producers, herbivores, carnivores, omnivores, environment):
+        """
+        Initialize a simulation state.
+        
+        Args:
+            t: Current time step
+            producers: List of producer organisms
+            herbivores: List of herbivore organisms
+            carnivores: List of carnivore organisms 
+            omnivores: List of omnivore organisms
+            environment: Nutrient grid (as 2D numpy array)
+        """
         self.t = t
-        self.producers = copy.deepcopy(producers)
-        self.herbivores = copy.deepcopy(herbivores)
-        self.carnivores = copy.deepcopy(carnivores)
-        self.omnivores = copy.deepcopy(omnivores)
-        self.environment = np.copy(environment)
+        # Make deep copies to prevent modification
+        self.producers = copy.deepcopy(producers) if producers else []
+        self.herbivores = copy.deepcopy(herbivores) if herbivores else []
+        self.carnivores = copy.deepcopy(carnivores) if carnivores else []
+        self.omnivores = copy.deepcopy(omnivores) if omnivores else []
+        self.environment = environment.copy() if environment is not None else None
+    
+    def get_organism_counts(self):
+        """Return a dictionary with counts of each organism type."""
+        return {
+            "producers": len(self.producers),
+            "herbivores": len(self.herbivores),
+            "carnivores": len(self.carnivores),
+            "omnivores": len(self.omnivores)
+        }
 
 def store_state(history, t, producers, herbivores, carnivores, omnivores, environment):
     """

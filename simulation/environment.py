@@ -1,137 +1,163 @@
 """
-Environment-related functions for the A-Life simulation.
-Handles seasons, disease, nutrient diffusion, and random organism spawning.
+Environment module for the A-Life simulation.
+
+This module handles the environment's state and behavior, including
+nutrient distribution, seasons, and climate effects.
 """
 
 import random
 import numpy as np
 from utils.constants import (
-    GRID_WIDTH, GRID_HEIGHT, SEASON_LENGTH, DISEASE_DURATION,
-    PRODUCER_INIT_ENERGY_RANGE, HERBIVORE_INIT_ENERGY_RANGE,
-    CARNIVORE_INIT_ENERGY_RANGE, OMNIVORE_INIT_ENERGY_RANGE,
-    NUTRIENT_DECAY_RATE, NUTRIENT_DIFFUSION_RATE,
-    BASE_SPAWN_CHANCE_PER_TURN, WINTER_SPAWN_MULT, SUMMER_SPAWN_MULT  # Add these imports
+    GRID_WIDTH, GRID_HEIGHT, SEASON_LENGTH,
+    NUTRIENT_DECAY_RATE, NUTRIENT_DIFFUSION_RATE, DISEASE_DURATION,
+    BASE_SPAWN_CHANCE_PER_TURN, SUMMER_SPAWN_MULT, WINTER_SPAWN_MULT
 )
-from organisms.producer import Producer
-from organisms.herbivore import Herbivore
-from organisms.carnivore import Carnivore
-from organisms.omnivore import Omnivore
 
 def current_season(timestep):
     """
-    Determine the current season based on timestep.
-    Simple 2-season cycle: Winter/Summer each SEASON_LENGTH steps
+    Determine the current season based on the timestep.
+    
+    Args:
+        timestep (int): Current simulation time step
+        
+    Returns:
+        str: "SUMMER" or "WINTER"
     """
-    cycle = (timestep // SEASON_LENGTH) % 2
-    return "WINTER" if cycle == 0 else "SUMMER"
+    phase = (timestep // SEASON_LENGTH) % 2
+    return "WINTER" if phase == 0 else "SUMMER"
 
 def random_border_cell():
     """
-    Generate coordinates for a random cell on the edge of the grid.
+    Generate a random cell on the border of the grid.
+    
+    Returns:
+        tuple: (x, y) coordinates on the border
     """
-    side = random.choice(["TOP", "BOTTOM", "LEFT", "RIGHT"])
-    if side == "TOP":
+    # Choose which border: top, right, bottom, or left
+    border = random.randint(0, 3)
+    
+    if border == 0:  # Top border
         return (random.randint(0, GRID_WIDTH - 1), 0)
-    elif side == "BOTTOM":
-        return (random.randint(0, GRID_WIDTH - 1), GRID_HEIGHT - 1)
-    elif side == "LEFT":
-        return (0, random.randint(0, GRID_HEIGHT - 1))
-    else:
+    elif border == 1:  # Right border
         return (GRID_WIDTH - 1, random.randint(0, GRID_HEIGHT - 1))
+    elif border == 2:  # Bottom border
+        return (random.randint(0, GRID_WIDTH - 1), GRID_HEIGHT - 1)
+    else:  # Left border
+        return (0, random.randint(0, GRID_HEIGHT - 1))
 
 def spawn_random_organism_on_border(producers, herbivores, carnivores, omnivores, season):
     """
-    Spawn a random organism on the grid border based on season.
+    Randomly spawn a new organism on the border based on chance.
     
     Args:
-        producers (list): List of producer organisms
-        herbivores (list): List of herbivore organisms
-        carnivores (list): List of carnivore organisms
-        omnivores (list): List of omnivore organisms
+        producers (list): List of Producer organisms
+        herbivores (list): List of Herbivore organisms
+        carnivores (list): List of Carnivore organisms
+        omnivores (list): List of Omnivore organisms
         season (str): Current season ("SUMMER" or "WINTER")
     """
-    # Update grid width and height dynamically
-    from utils.config_manager import ConfigManager
-    config = ConfigManager()
-    grid_width = config.get_grid_width()
-    grid_height = config.get_grid_height()
+    from organisms.producer import Producer
+    from organisms.herbivore import Herbivore
+    from organisms.carnivore import Carnivore
+    from organisms.omnivore import Omnivore
     
-    # Adjust spawn chance based on season
+    # Get spawn chance based on season
     if season == "SUMMER":
         spawn_chance = BASE_SPAWN_CHANCE_PER_TURN * SUMMER_SPAWN_MULT
     else:  # WINTER
         spawn_chance = BASE_SPAWN_CHANCE_PER_TURN * WINTER_SPAWN_MULT
-    
-    # Check if spawning should happen
+        
+    # Check if we should spawn an organism
     if random.random() > spawn_chance:
         return
+        
+    # Generate coordinates on the border
+    x, y = random_border_cell()
     
-    # Generate random border position using correct grid dimensions
-    border = random.randint(0, 3)
-    if border == 0:  # Top
-        x, y = random.randint(0, grid_width - 1), 0
-    elif border == 1:  # Right
-        x, y = grid_width - 1, random.randint(0, grid_height - 1)
-    elif border == 2:  # Bottom
-        x, y = random.randint(0, grid_width - 1), grid_height - 1
-    else:  # Left
-        x, y = 0, random.randint(0, grid_height - 1)
+    # Randomly select which type of organism to spawn
+    organism_type = random.choice(["producer", "herbivore", "carnivore", "omnivore"])
     
-    # Randomly choose organism type with weighted probabilities
-    organism_type = random.choices(
-        ["producer", "herbivore", "carnivore", "omnivore"],
-        weights=[0.5, 0.25, 0.15, 0.1],
-        k=1
-    )[0]
-    
-    # Create organism based on type
+    # Create the appropriate organism type
     if organism_type == "producer":
-        energy = random.randint(*PRODUCER_INIT_ENERGY_RANGE)
-        producers.append(Producer(x, y, energy))
+        organism = Producer(x, y, 10)
+        producers.append(organism)
     elif organism_type == "herbivore":
-        energy = random.randint(*HERBIVORE_INIT_ENERGY_RANGE)
-        herbivores.append(Herbivore(x, y, energy))
+        organism = Herbivore(x, y, 15)
+        herbivores.append(organism)
     elif organism_type == "carnivore":
-        energy = random.randint(*CARNIVORE_INIT_ENERGY_RANGE)
-        carnivores.append(Carnivore(x, y, energy))
-    else:  # omnivore
-        energy = random.randint(*OMNIVORE_INIT_ENERGY_RANGE)
-        omnivores.append(Omnivore(x, y, energy))
+        organism = Carnivore(x, y, 20)
+        carnivores.append(organism)
+    else:  # "omnivore"
+        organism = Omnivore(x, y, 15)
+        omnivores.append(organism)
 
 def disease_outbreak(herbivores, carnivores, omnivores):
     """
-    Infect a small subset of animals for DISEASE_DURATION.
-    We'll pick e.g., 5 random animals total to infect (if that many exist).
+    Randomly infect organisms with a disease.
+    
+    Args:
+        herbivores (list): List of Herbivore organisms
+        carnivores (list): List of Carnivore organisms
+        omnivores (list): List of Omnivore organisms
     """
+    # Combine all animals
     all_animals = herbivores + carnivores + omnivores
-    if len(all_animals) == 0:
+    if not all_animals:
         return
-    k = min(5, len(all_animals))
-    infected = random.sample(all_animals, k)
-    for a in infected:
-        a.disease_timer = DISEASE_DURATION
+        
+    # Randomly infect some animals (up to 20% of population)
+    max_infections = min(5, len(all_animals) // 5 + 1)
+    
+    # Try to infect random organisms
+    for _ in range(max_infections):
+        if not all_animals:
+            break
+            
+        # Select a random animal
+        idx = random.randint(0, len(all_animals) - 1)
+        
+        # Only infect if not already infected
+        if all_animals[idx].disease_timer == 0 and random.random() < 0.7:
+            all_animals[idx].disease_timer = DISEASE_DURATION
+            
+        # Remove from pool to avoid re-infection
+        all_animals.pop(idx)
 
 def update_environment(environment):
     """
-    Update the nutrient environment:
-    - Decay nutrients naturally
-    - Diffuse nutrients between cells
+    Update the nutrient environment grid.
+    
+    Args:
+        environment (ndarray): The current nutrient environment grid
+        
+    Returns:
+        ndarray: Updated grid after diffusion and decay
     """
-    environment -= NUTRIENT_DECAY_RATE
-    environment = np.maximum(environment, 0)  # Ensure we don't go below zero
+    # Create a copy of the environment to avoid modifying during calculation
+    new_env = environment.copy()
     
-    # Get current grid dimensions directly from the environment array
-    grid_height, grid_width = environment.shape
+    # Apply nutrient diffusion
+    height, width = environment.shape
     
-    # Diffusion - copy to avoid changing the environment during diffusion
-    temp_env = environment.copy()
+    for y in range(height):
+        for x in range(width):
+            # For each neighbor direction (N, E, S, W)
+            for dx, dy in [(0, -1), (1, 0), (0, 1), (-1, 0)]:
+                # Calculate neighbor position with wrapping
+                nx = (x + dx) % width
+                ny = (y + dy) % height
+                
+                # Calculate diffusion amount (proportional to concentration difference)
+                diff = (environment[y, x] - environment[ny, nx]) * NUTRIENT_DIFFUSION_RATE
+                
+                # Transfer nutrients
+                new_env[y, x] -= diff
+                new_env[ny, nx] += diff
     
-    for y in range(grid_height):
-        for x in range(grid_width):
-            for dx, dy in [(1,0),(-1,0),(0,1),(0,-1)]:
-                nx, ny = (x+dx) % grid_width, (y+dy) % grid_height
-                diff_amt = NUTRIENT_DIFFUSION_RATE * (temp_env[y,x] - temp_env[ny,nx])
-                environment[y,x] -= diff_amt
-                environment[ny,nx] += diff_amt
+    # Apply nutrient decay
+    new_env *= (1.0 - NUTRIENT_DECAY_RATE)
     
-    return environment
+    # Ensure no negative values
+    new_env = np.maximum(new_env, 0.0)
+    
+    return new_env

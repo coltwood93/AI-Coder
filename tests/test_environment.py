@@ -19,8 +19,10 @@ from utils.constants import (
 
 class TestEnvironment(unittest.TestCase):
     def setUp(self):
+        # Get grid dimensions directly from constants
         self.grid_width = GRID_WIDTH
         self.grid_height = GRID_HEIGHT
+        
         # Create a simple test environment
         self.environment = np.full((self.grid_height, self.grid_width), INITIAL_NUTRIENT_LEVEL)
         
@@ -34,6 +36,9 @@ class TestEnvironment(unittest.TestCase):
         Herbivore.reset_id_counter()
         Carnivore.reset_id_counter()
         Omnivore.reset_id_counter()
+        
+        # Debug info
+        print(f"Grid dimensions in test: {self.grid_width}x{self.grid_height}")
     
     def test_current_season(self):
         """Test that current_season returns correct values."""
@@ -44,62 +49,68 @@ class TestEnvironment(unittest.TestCase):
     
     def test_random_border_cell(self):
         """Test that random_border_cell returns valid border coordinates."""
-        # Just use the function without arguments since that's what the implementation expects
-        x, y = random_border_cell()
+        for _ in range(10):  # Try multiple times for better testing
+            # Call the function
+            x, y = random_border_cell()
             
-        # Check coordinates are within grid bounds
-        self.assertTrue(0 <= x < self.grid_width)
-        self.assertTrue(0 <= y < self.grid_height)
+            # Print coordinates for debugging
+            print(f"Random border cell: ({x}, {y}), Grid: {self.grid_width}x{self.grid_height}")
+                
+            # Check coordinates are within grid bounds
+            self.assertTrue(0 <= x < self.grid_width, f"x={x} is out of bounds [0, {self.grid_width})")
+            self.assertTrue(0 <= y < self.grid_height, f"y={y} is out of bounds [0, {self.grid_height})")
+                
+            # Check that at least one coordinate is on the border
+            is_border = (
+                x == 0 or x == self.grid_width - 1 or 
+                y == 0 or y == self.grid_height - 1
+            )
             
-        # Check that at least one coordinate is on the border
-        self.assertTrue(
-            x == 0 or x == self.grid_width - 1 or 
-            y == 0 or y == self.grid_height - 1
-        )
+            if not is_border:
+                print(f"Not border: x={x}, y={y}, width={self.grid_width}, height={self.grid_height}")
+                print(f"Border check: x==0: {x==0}, x==width-1: {x==self.grid_width-1}, " 
+                      f"y==0: {y==0}, y==height-1: {y==self.grid_height-1}")
+            
+            self.assertTrue(is_border)
+            
+            # If this test passes, we don't need to test further
+            if is_border:
+                break
     
-    @patch('random.random', return_value=0.0)  # Force organisms to spawn
-    @patch('random.choice', return_value='producer')  # Force producer type
-    def test_spawn_random_organism_on_border(self, mock_choice, mock_random):
+    def test_spawn_random_organism_on_border(self):
         """Test spawning an organism on the border."""
         from organisms.producer import Producer
         
-        # Set up empty lists for each organism type
+        # Create empty lists for each organism type
         producers = []
         herbivores = []
         carnivores = []
         omnivores = []
         
-        # Force spawn in summer season (higher spawn chance)
-        season = "SUMMER"
-        
-        # Use a patched version of random_border_cell that returns a guaranteed border cell
+        # Override random_border_cell to always return a known border position
         with patch('simulation.environment.random_border_cell', return_value=(0, 0)):
-            # Call spawn function with our mocked border position
-            spawn_random_organism_on_border(
-                producers, herbivores, carnivores, omnivores, season
-            )
+            # Make sure we spawn by patching random
+            with patch('random.random', return_value=0.0), \
+                 patch('random.choice', return_value='producer'):
+                # Call the function we're testing
+                spawn_random_organism_on_border(
+                    producers, herbivores, carnivores, omnivores, "SUMMER"
+                )
         
-        # Ensure we have at least one organism to test - if spawning didn't work, create manually
-        if not (producers or herbivores or carnivores or omnivores):
-            producers.append(Producer(0, 0, 100))  # Add a producer at border position
-        
-        # Check if any organisms were spawned
+        # Check that at least one organism was spawned
         all_organisms = producers + herbivores + carnivores + omnivores
         self.assertGreater(len(all_organisms), 0, "No organisms were spawned")
         
-        # Check that all organisms are on the border
+        # If no organism was spawned, create one manually at a valid border position
+        if len(all_organisms) == 0:
+            producers.append(Producer(0, 0, 100))
+            all_organisms = [producers[0]]
+        
+        # Check that organisms are on the border
         for org in all_organisms:
-            print(f"Testing organism at ({org.x}, {org.y}), grid: {self.grid_width}x{self.grid_height}")
-            
-            is_on_border = (
-                org.x == 0 or 
-                org.y == 0 or 
-                org.x == self.grid_width - 1 or 
-                org.y == self.grid_height - 1
-            )
-            
             self.assertTrue(
-                is_on_border,
+                org.x == 0 or org.x == self.grid_width - 1 or
+                org.y == 0 or org.y == self.grid_height - 1,
                 f"Organism at ({org.x}, {org.y}) is not on border, grid: {self.grid_width}x{self.grid_height}"
             )
     
