@@ -173,6 +173,9 @@ cython_debug/
 # result csv
 results_interactive.csv
 
+# dynamic config
+config.json
+
 # h5 storage files
 *.hdf5
 *.h5

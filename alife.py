@@ -27,7 +27,11 @@ from simulation.manager import SimulationManager
 from ui.renderer import SimulationRenderer
 from ui.input_handler import InputHandler
 from ui.options_menu import OptionsMenu
+from ui.main_menu_options import MainMenuOptions
 from utils.config_manager import ConfigManager
+
+# Add a new constant for main menu–only options
+MAIN_MENU_OPTIONS = "main_menu_options"
 
 # Set random seed for reproducibility
 random.seed()
@@ -55,6 +59,7 @@ class SimulationApp:
         
         # Initialize options menu
         self.options_menu = OptionsMenu(self.config_manager, self.main_font)
+        self.main_menu_options = MainMenuOptions(self.config_manager, self.main_font)
         
         # Setup CSV logging
         self.csvfile = open("results_interactive.csv", "w", newline="")
@@ -81,15 +86,43 @@ class SimulationApp:
         running = True
         
         while running:
+            # Always get the latest settings directly from config_manager
+            current_fps = self.config_manager.get_fps()
+            current_speed = self.config_manager.get_simulation_speed()
+            
             # Process events
             events = pygame.event.get()
             new_state, new_from_main_menu, continue_running = self.input_handler.handle_events(
                 events, self.current_state, self.from_main_menu
             )
             
+            # If current_state == MAIN_MENU_OPTIONS, let main_menu_options handle events
+            if self.current_state == MAIN_MENU_OPTIONS:
+                # Process escape key to return to main menu
+                for event in events:
+                    if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                        self.current_state = MAIN_MENU
+                        update_from_config(self.config_manager)
+                        break
+                
+                # Process other inputs if we're still in options
+                if self.current_state == MAIN_MENU_OPTIONS:
+                    self.main_menu_options.handle_input(events)
+                    # Check if we should return to main menu
+                    if self.main_menu_options.should_return_to_menu():
+                        self.current_state = MAIN_MENU
+                        # Update simulation parameters from options
+                        update_from_config(self.config_manager)
+            
             # Update state if changed
             if new_state is not None:
+                previous_state = self.current_state
                 self.current_state = new_state
+                
+                # If coming back from options menu, apply updated settings
+                if previous_state == OPTIONS_MENU and new_state != OPTIONS_MENU:
+                    self._apply_updated_settings()
+                    
             if new_from_main_menu is not None:
                 self.from_main_menu = new_from_main_menu
             
@@ -106,31 +139,57 @@ class SimulationApp:
                         print(f"Scrolling stats panel: {self.renderer.stats_scroll_y}/{self.renderer.max_scroll_y}")
             
             # Update simulation if needed
-            self._update_simulation()
+            self._update_simulation(current_fps, current_speed)
             
             # Render the current state
             self._render_current_state()
             
-            # Update the display
+            # Update the display and use the current fps setting
             pygame.display.flip()
-            self.clock.tick(FPS)
+            self.clock.tick(current_fps)
         
         # Cleanup resources
         self._cleanup()
     
-    def _update_simulation(self):
+    def _apply_updated_settings(self):
+        """Apply updated simulation settings."""
+        # Update constants from config
+        update_from_config(self.config_manager)
+        
+        # Reset frame counter to apply new speed immediately
+        self.frame_counter = 0
+        
+        # Update the clock to apply new FPS setting
+        self.clock = pygame.time.Clock()
+        
+        print(f"Applied settings: Speed={self.config_manager.get_simulation_speed()}, FPS={self.config_manager.get_fps()}")
+    
+    def _update_simulation(self, current_fps, current_speed):
         """Update the simulation state if appropriate."""
         if self.current_state == SIMULATION and not self.simulation.is_paused:
-            # Only update simulation at a fraction of the visual framerate
-            # This creates a slower simulation while keeping UI responsiveness
-            if hasattr(self, 'frame_counter'):
-                self.frame_counter += 1
-            else:
+            # Always get latest values directly from config_manager
+            current_fps = self.config_manager.get_fps()
+            current_speed = self.config_manager.get_simulation_speed()
+            
+            # Reset frame counter if not exists
+            if not hasattr(self, 'frame_counter'):
                 self.frame_counter = 0
                 
-            # Only step simulation every few frames based on SIMULATION_SPEED
-            if self.frame_counter >= 1 / SIMULATION_SPEED:
+            # Increment frame counter
+            self.frame_counter += 1
+            
+            # Calculate frames to wait before updating simulation
+            # Lower values = more frequent updates = faster simulation 
+            update_interval = max(1, int(current_fps / current_speed))
+                
+            # Only update when enough frames have passed
+            if self.frame_counter >= update_interval:
                 self.frame_counter = 0
+                # Print debug info periodically
+                if self.simulation.current_step % 10 == 0:
+                    print(f"Speed={current_speed}, FPS={current_fps}, Update interval={update_interval}")
+                
+                # Update simulation
                 if self.simulation.is_replaying:
                     if self.simulation.current_step < len(self.simulation.history) - 1:
                         print(f"Replaying step: {self.simulation.current_step+1}")
@@ -153,8 +212,12 @@ class SimulationApp:
                 "A-Life Simulation"
             )
         
+        elif self.current_state == MAIN_MENU_OPTIONS:
+            # Render the MainMenuOptions screen
+            self.main_menu_options.draw(self.screen)
+        
         elif self.current_state == OPTIONS_MENU:
-            # Use the options menu renderer instead of the generic menu
+            # Render mid-game options menu
             self.renderer.render_options_menu(self.options_menu)
         
         elif self.current_state == SIMULATION:

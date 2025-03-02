@@ -60,31 +60,48 @@ class SimulationManager:
     
     def _initialize_organisms(self):
         """Initialize all organisms in the simulation."""
+        # Get the current config values for organism counts
+        from utils.config_manager import ConfigManager
+        config = ConfigManager()
+        
+        # Get grid dimensions
+        grid_width = config.get_grid_width()
+        grid_height = config.get_grid_height()
+        
+        # Get organism counts from config
+        producer_count = config.get_initial_count("producers")
+        herbivore_count = config.get_initial_count("herbivores")
+        carnivore_count = config.get_initial_count("carnivores")
+        omnivore_count = config.get_initial_count("omnivores")
+        
+        print(f"Initializing organisms: {producer_count} producers, {herbivore_count} herbivores, "
+              f"{carnivore_count} carnivores, {omnivore_count} omnivores")
+        
         # Initialize producers
-        for _ in range(INITIAL_PRODUCERS):
-            px = random.randint(0, GRID_WIDTH - 1)
-            py = random.randint(0, GRID_HEIGHT - 1)
+        for _ in range(producer_count):
+            px = random.randint(0, grid_width - 1)
+            py = random.randint(0, grid_height - 1)
             pen = random.randint(*PRODUCER_INIT_ENERGY_RANGE)
             self.producers.append(Producer(px, py, pen))
         
         # Initialize herbivores
-        for _ in range(INITIAL_HERBIVORES):
-            hx = random.randint(0, GRID_WIDTH - 1)
-            hy = random.randint(0, GRID_HEIGHT - 1)
+        for _ in range(herbivore_count):
+            hx = random.randint(0, grid_width - 1)
+            hy = random.randint(0, grid_height - 1)
             hen = random.randint(*HERBIVORE_INIT_ENERGY_RANGE)
             self.herbivores.append(Herbivore(hx, hy, hen))
         
         # Initialize carnivores
-        for _ in range(INITIAL_CARNIVORES):
-            cx = random.randint(0, GRID_WIDTH - 1)
-            cy = random.randint(0, GRID_HEIGHT - 1)
+        for _ in range(carnivore_count):
+            cx = random.randint(0, grid_width - 1)
+            cy = random.randint(0, grid_height - 1)
             cen = random.randint(*CARNIVORE_INIT_ENERGY_RANGE)
             self.carnivores.append(Carnivore(cx, cy, cen))
         
         # Initialize omnivores
-        for _ in range(INITIAL_OMNIVORES):
-            ox = random.randint(0, GRID_WIDTH - 1)
-            oy = random.randint(0, GRID_HEIGHT - 1)
+        for _ in range(omnivore_count):
+            ox = random.randint(0, grid_width - 1)
+            oy = random.randint(0, grid_height - 1)
             oen = random.randint(*OMNIVORE_INIT_ENERGY_RANGE)
             self.omnivores.append(Omnivore(ox, oy, oen))
     
@@ -198,7 +215,8 @@ class SimulationManager:
             oldx, oldy = h.x, h.y
             h.update(self.producers, self.herbivores, self.carnivores, self.omnivores, self.environment)
             if h.is_dead():
-                self.environment[oldx, oldy] += CONSUMER_NUTRIENT_RELEASE
+                # Add nutrients using [y, x] coordinate order for NumPy arrays
+                self.environment[oldy, oldx] += CONSUMER_NUTRIENT_RELEASE
         self.herbivores[:] = [h for h in self.herbivores if not h.is_dead()]
     
     def _update_carnivores(self):
@@ -207,7 +225,8 @@ class SimulationManager:
             oldx, oldy = c.x, c.y
             c.update(self.producers, self.herbivores, self.carnivores, self.omnivores, self.environment)
             if c.is_dead():
-                self.environment[oldx, oldy] += CONSUMER_NUTRIENT_RELEASE
+                # Add nutrients using [y, x] coordinate order for NumPy arrays
+                self.environment[oldy, oldx] += CONSUMER_NUTRIENT_RELEASE
         self.carnivores[:] = [c for c in self.carnivores if not c.is_dead()]
     
     def _update_omnivores(self):
@@ -216,7 +235,8 @@ class SimulationManager:
             oldx, oldy = o.x, o.y
             o.update(self.producers, self.herbivores, self.carnivores, self.omnivores, self.environment)
             if o.is_dead():
-                self.environment[oldx, oldy] += CONSUMER_NUTRIENT_RELEASE
+                # Add nutrients using [y, x] coordinate order for NumPy arrays
+                self.environment[oldy, oldx] += CONSUMER_NUTRIENT_RELEASE
         self.omnivores[:] = [o for o in self.omnivores if not o.is_dead()]
     
     def step_back(self):
@@ -250,8 +270,26 @@ class SimulationManager:
     
     def reset(self):
         """Reset the simulation to initial state."""
+        # Get current grid dimensions from config manager
+        from utils.config_manager import ConfigManager
+        config = ConfigManager()
+        grid_width = config.get_grid_width()
+        grid_height = config.get_grid_height()
+        
+        # Reset the organism ID counters
+        Producer.reset_id_counter()
+        Herbivore.reset_id_counter()
+        Carnivore.reset_id_counter()
+        Omnivore.reset_id_counter()
+        
+        # Initialize environment with proper dimensions
+        # Note: Create as height x width (rows x columns) to match NumPy convention
+        self.environment = np.full((grid_height, grid_width), INITIAL_NUTRIENT_LEVEL)
+        
+        # Print grid dimensions for debugging
+        print(f"Created new environment with shape: {self.environment.shape}")
+        
         # Clear data structures
-        self.environment = np.full((GRID_WIDTH, GRID_HEIGHT), INITIAL_NUTRIENT_LEVEL)
         self.producers = []
         self.herbivores = []
         self.carnivores = []
@@ -291,7 +329,7 @@ class SimulationManager:
         # Reset the ID counters in all organism classes
         self._reset_organism_id_counters()
         
-        # Reinitialize organisms
+        # Initialize organisms using the helper method that gets values from config
         self._initialize_organisms()
         
         # Store initial state
@@ -302,7 +340,7 @@ class SimulationManager:
         log_and_print_stats(0, self.producers, self.herbivores, self.carnivores, self.omnivores, self.csv_writer)
         
         print("Simulation reset complete")
-
+    
     def _reset_organism_id_counters(self):
         """Reset the ID counters for all organism types."""
         from organisms.producer import Producer

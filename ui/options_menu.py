@@ -16,18 +16,6 @@ class OptionsMenu:
         
         # Define options
         self.options = [
-            ("Grid Width", lambda: self.config_manager.get_grid_width(), 
-             lambda v: self.config_manager.set_grid_size(v, self.config_manager.get_grid_height())),
-            ("Grid Height", lambda: self.config_manager.get_grid_height(), 
-             lambda v: self.config_manager.set_grid_size(self.config_manager.get_grid_width(), v)),
-            ("Initial Producers", lambda: self.config_manager.get_initial_count("producers"), 
-             lambda v: self.config_manager.set_initial_count("producers", v)),
-            ("Initial Herbivores", lambda: self.config_manager.get_initial_count("herbivores"), 
-             lambda v: self.config_manager.set_initial_count("herbivores", v)),
-            ("Initial Carnivores", lambda: self.config_manager.get_initial_count("carnivores"), 
-             lambda v: self.config_manager.set_initial_count("carnivores", v)),
-            ("Initial Omnivores", lambda: self.config_manager.get_initial_count("omnivores"), 
-             lambda v: self.config_manager.set_initial_count("omnivores", v)),
             ("Simulation Speed", lambda: self.config_manager.get_simulation_speed(), 
              lambda v: self.config_manager.set_simulation_speed(v)),
             ("FPS", lambda: self.config_manager.get_fps(), 
@@ -73,20 +61,28 @@ class OptionsMenu:
                 option_name, _, set_func = self.options[self.selected_option]
                 if "Speed" in option_name:
                     value = float(self.edit_value)
+                    set_func(value)
+                    print(f"Updated {option_name} to {value}")
                 else:
                     value = int(self.edit_value)
-                set_func(value)
-            except (ValueError, TypeError):
+                    set_func(value)
+                    print(f"Updated {option_name} to {value}")
+                
+                # Save config after each change
+                self.config_manager.save_config()
+            except (ValueError, TypeError) as e:
+                print(f"Error updating value: {e}")
                 pass  # Ignore invalid input
             finally:
                 self.editing = False
         elif key == pygame.K_BACKSPACE:
             # Delete last character
-            self.edit_value = self.edit_value[:-1]
-        elif key >= 48 and key <= 57:  # 0-9 keys
-            # Add digit
-            self.edit_value += chr(key)
-        elif key == 46:  # Period key for decimal point
+            if self.edit_value:
+                self.edit_value = self.edit_value[:-1]
+        elif pygame.K_0 <= key <= pygame.K_9:
+            # Add digit (both regular and numpad keys)
+            self.edit_value += pygame.key.name(key)
+        elif key == pygame.K_PERIOD or key == pygame.K_KP_PERIOD:
             # Add decimal point for float values if not already present
             if "Speed" in self.options[self.selected_option][0] and "." not in self.edit_value:
                 self.edit_value += "."

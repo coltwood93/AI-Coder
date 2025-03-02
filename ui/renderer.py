@@ -30,12 +30,22 @@ class SimulationRenderer:
         """Renders the complete simulation state to the screen."""
         self.screen.fill((0, 0, 0))
         
-        # Render environment grid and organisms
-        self._render_environment(environment)
-        self._render_producers(producers)
-        self._render_herbivores(herbivores)
-        self._render_carnivores(carnivores)
-        self._render_omnivores(omnivores)
+        # Calculate cell size dynamically based on current grid dimensions
+        grid_height, grid_width = environment.shape
+        cell_size_x = GRID_DISPLAY_WIDTH / grid_width
+        cell_size_y = GRID_DISPLAY_HEIGHT / grid_height
+        actual_cell_size = min(cell_size_x, cell_size_y)
+        
+        # Calculate offset to center the grid if aspect ratios don't match
+        x_offset = (GRID_DISPLAY_WIDTH - (grid_width * actual_cell_size)) / 2
+        y_offset = (GRID_DISPLAY_HEIGHT - (grid_height * actual_cell_size)) / 2
+        
+        # Render environment grid and organisms with offset
+        self._render_environment(environment, actual_cell_size, x_offset, y_offset)
+        self._render_producers(producers, actual_cell_size, x_offset, y_offset)
+        self._render_herbivores(herbivores, actual_cell_size, x_offset, y_offset)
+        self._render_carnivores(carnivores, actual_cell_size, x_offset, y_offset)
+        self._render_omnivores(omnivores, actual_cell_size, x_offset, y_offset)
         
         # Render stats panel
         self._render_stats_panel(
@@ -134,79 +144,97 @@ class SimulationRenderer:
         options_menu.render(self.screen)
     
     # Private rendering methods
-    def _render_environment(self, environment):
+    def _render_environment(self, environment, actual_cell_size, x_offset=0, y_offset=0):
         """Render the nutrient environment grid."""
         # Create a surface for the environment grid
         grid_surface = pygame.Surface((GRID_DISPLAY_WIDTH, GRID_DISPLAY_HEIGHT))
         grid_surface.fill((0, 0, 0))
         
+        # Get actual grid dimensions from environment array
+        # Note: NumPy arrays are accessed as [row, column] which is [y, x]
+        grid_height, grid_width = environment.shape
+        
         # Draw the environment cells onto the surface
-        for x in range(GRID_WIDTH):
-            for y in range(GRID_HEIGHT):
-                val = environment[x, y]
-                r = int(0 * val)
-                g = int(0 * val)
-                b = int(255 * val)
-                cell_rect = pygame.Rect(
-                    int(x * CELL_SIZE_X), 
-                    int(y * CELL_SIZE_Y), 
-                    int(CELL_SIZE_X) + 1, 
-                    int(CELL_SIZE_Y) + 1
-                )
-                pygame.draw.rect(grid_surface, (r, g, b), cell_rect)
+        for y in range(grid_height):
+            for x in range(grid_width):
+                try:
+                    # Access as [y, x] for NumPy array
+                    val = min(max(environment[y, x], 0), 1)
+                    
+                    # Calculate RGB color based on nutrient level
+                    r = 0
+                    g = int(50 * val)
+                    b = int(155 * val) + 100
+                    
+                    color = (
+                        max(0, min(255, r)),
+                        max(0, min(255, g)),
+                        max(0, min(255, b))
+                    )
+                    
+                    cell_rect = pygame.Rect(
+                        int(x * actual_cell_size + x_offset), 
+                        int(y * actual_cell_size + y_offset), 
+                        int(actual_cell_size) + 1, 
+                        int(actual_cell_size) + 1
+                    )
+                    pygame.draw.rect(grid_surface, color, cell_rect)
+                except IndexError as e:
+                    # Debug output to help diagnose any future issues
+                    print(f"IndexError at ({x},{y}) with grid shape {environment.shape}: {e}")
         
         # Draw the grid surface onto the screen
         self.screen.blit(grid_surface, (0, 0))
     
-    def _render_producers(self, producers):
+    def _render_producers(self, producers, actual_cell_size, x_offset=0, y_offset=0):
         """Render all producer organisms."""
         for p in producers:
-            px = int(p.x * CELL_SIZE_X)
-            py = int(p.y * CELL_SIZE_Y)
+            px = int(p.x * actual_cell_size + x_offset)
+            py = int(p.y * actual_cell_size + y_offset)
             pygame.draw.rect(self.screen, (0, 200, 0), 
-                            (px, py, int(CELL_SIZE_X) + 1, int(CELL_SIZE_Y) + 1))
+                            (px, py, int(actual_cell_size) + 1, int(actual_cell_size) + 1))
     
-    def _render_herbivores(self, herbivores):
+    def _render_herbivores(self, herbivores, actual_cell_size, x_offset=0, y_offset=0):
         """Render all herbivore organisms with labels."""
         for h in herbivores:
-            hx = int(h.x * CELL_SIZE_X)
-            hy = int(h.y * CELL_SIZE_Y)
-            radius = int(min(CELL_SIZE_X, CELL_SIZE_Y) / 2)
-            center = (hx + int(CELL_SIZE_X / 2), hy + int(CELL_SIZE_Y / 2))
+            hx = int(h.x * actual_cell_size + x_offset)
+            hy = int(h.y * actual_cell_size + y_offset)
+            radius = int(min(actual_cell_size, actual_cell_size) / 2)
+            center = (hx + int(actual_cell_size / 2), hy + int(actual_cell_size / 2))
             pygame.draw.circle(self.screen, (255, 255, 255), center, radius)
-            self._render_centered_label(f"H{h.id}", hx, hy, (0, 0, 0), (255, 255, 255))
+            self._render_centered_label(f"H{h.id}", hx, hy, (0, 0, 0), (255, 255, 255), actual_cell_size)
     
-    def _render_carnivores(self, carnivores):
+    def _render_carnivores(self, carnivores, actual_cell_size, x_offset=0, y_offset=0):
         """Render all carnivore organisms with labels."""
         for c in carnivores:
-            cx = int(c.x * CELL_SIZE_X)
-            cy = int(c.y * CELL_SIZE_Y)
-            radius = int(min(CELL_SIZE_X, CELL_SIZE_Y) / 2)
-            center = (cx + int(CELL_SIZE_X / 2), cy + int(CELL_SIZE_Y / 2))
+            cx = int(c.x * actual_cell_size + x_offset)
+            cy = int(c.y * actual_cell_size + y_offset)
+            radius = int(min(actual_cell_size, actual_cell_size) / 2)
+            center = (cx + int(actual_cell_size / 2), cy + int(actual_cell_size / 2))
             pygame.draw.circle(self.screen, (255, 0, 0), center, radius)
-            self._render_centered_label(f"C{c.id}", cx, cy, (0, 0, 0), (255, 0, 0))
+            self._render_centered_label(f"C{c.id}", cx, cy, (0, 0, 0), (255, 0, 0), actual_cell_size)
     
-    def _render_omnivores(self, omnivores):
+    def _render_omnivores(self, omnivores, actual_cell_size, x_offset=0, y_offset=0):
         """Render all omnivore organisms with labels."""
         for o in omnivores:
-            ox = int(o.x * CELL_SIZE_X)
-            oy = int(o.y * CELL_SIZE_Y)
-            radius = int(min(CELL_SIZE_X, CELL_SIZE_Y) / 2)
-            center = (ox + int(CELL_SIZE_X / 2), oy + int(CELL_SIZE_Y / 2))
+            ox = int(o.x * actual_cell_size + x_offset)
+            oy = int(o.y * actual_cell_size + y_offset)
+            radius = int(min(actual_cell_size, actual_cell_size) / 2)
+            center = (ox + int(actual_cell_size / 2), oy + int(actual_cell_size / 2))
             pygame.draw.circle(self.screen, (255, 165, 0), center, radius)
-            self._render_centered_label(f"O{o.id}", ox, oy, (0, 0, 0), (255, 165, 0))
+            self._render_centered_label(f"O{o.id}", ox, oy, (0, 0, 0), (255, 165, 0), actual_cell_size)
     
-    def _render_centered_label(self, text, pos_x, pos_y, color, bg_color):
+    def _render_centered_label(self, text, pos_x, pos_y, color, bg_color, actual_cell_size):
         """Helper to render centered text on organisms."""
         # Calculate appropriate label size based on cell size
-        label_size = max(10, min(24, int(min(CELL_SIZE_X, CELL_SIZE_Y) * 0.6)))
+        label_size = max(10, min(24, int(min(actual_cell_size, actual_cell_size) * 0.6)))
         dynamic_font = pygame.font.SysFont(None, label_size)
         
         # Render text with background
         text_surf = dynamic_font.render(text, True, color)
         text_rect = text_surf.get_rect(center=(
-            pos_x + int(CELL_SIZE_X / 2), 
-            pos_y + int(CELL_SIZE_Y / 2)
+            pos_x + int(actual_cell_size / 2), 
+            pos_y + int(actual_cell_size / 2)
         ))
         padding = 2
         bg_rect = pygame.Rect(

@@ -23,9 +23,10 @@ class Producer:
 
     def update(self, producers, herbivores, carnivores, omnivores, environment):
         # Always consume nutrients and gain energy
-        nutrient_taken = min(environment[self.x, self.y], PRODUCER_NUTRIENT_CONSUMPTION)
+        # Access environment as [y, x] since NumPy arrays are indexed as [row, column]
+        nutrient_taken = min(environment[self.y, self.x], PRODUCER_NUTRIENT_CONSUMPTION)
         self.energy += nutrient_taken * PRODUCER_ENERGY_GAIN
-        environment[self.x, self.y] -= nutrient_taken
+        environment[self.y, self.x] -= nutrient_taken
 
         # Cap energy at maximum after gains
         if self.energy > PRODUCER_MAX_ENERGY:
@@ -41,11 +42,19 @@ class Producer:
                 producers.append(baby)
 
     def random_adjacent(self):
+        """Find a random adjacent cell, using proper grid boundaries from environment."""
         dirs = [(-1,0),(1,0),(0,-1),(0,1),
                 (-1,-1),(1,1),(-1,1),(1,-1)]
         dx, dy = random.choice(dirs)
-        nx = (self.x + dx) % GRID_WIDTH
-        ny = (self.y + dy) % GRID_HEIGHT
+        
+        # Use dynamic grid dimensions
+        from utils.config_manager import ConfigManager
+        config = ConfigManager()
+        grid_width = config.get_grid_width()
+        grid_height = config.get_grid_height()
+        
+        nx = (self.x + dx) % grid_width
+        ny = (self.y + dy) % grid_height
         return nx, ny
 
     def is_dead(self):

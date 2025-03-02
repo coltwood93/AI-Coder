@@ -17,8 +17,8 @@ DEFAULT_INITIAL_CARNIVORES = 10
 DEFAULT_INITIAL_OMNIVORES = 3
 
 # Default simulation settings
-DEFAULT_SIMULATION_SPEED = 1.0
-DEFAULT_FPS = 15
+DEFAULT_SIMULATION_SPEED = 2.0
+DEFAULT_FPS = 60
 
 # These values will be replaced at runtime with values from config_manager
 # Keep them here as initial values until config is loaded
@@ -134,11 +134,13 @@ def update_from_config(config_manager):
     SIMULATION_SPEED = config_manager.get_simulation_speed()
     FPS = config_manager.get_fps()
     
-    # Recalculate derived values
+    # Recalculate display dimensions based on grid size
     GRID_DISPLAY_WIDTH = WINDOW_WIDTH - STATS_PANEL_WIDTH
     GRID_DISPLAY_HEIGHT = WINDOW_HEIGHT
+    
+    # This is the crucial part - recalculate cell size based on new grid dimensions
     CELL_SIZE_X = GRID_DISPLAY_WIDTH / GRID_WIDTH
     CELL_SIZE_Y = GRID_DISPLAY_HEIGHT / GRID_HEIGHT
     CELL_SIZE = min(CELL_SIZE_X, CELL_SIZE_Y)
     
-    print(f"Updated constants: Grid {GRID_WIDTH}x{GRID_HEIGHT}, Speed {SIMULATION_SPEED}, FPS {FPS}")
+    print(f"Updated display: Cell size = {CELL_SIZE:.2f}px for grid {GRID_WIDTH}x{GRID_HEIGHT}")

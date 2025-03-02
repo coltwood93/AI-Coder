@@ -82,6 +82,18 @@ class ConfigManager:
         """Get the frames per second setting."""
         return self.config["simulation"]["fps"]
     
+    def set_grid_width(self, value):
+        """Set the grid width."""
+        self.config["grid"]["width"] = max(10, min(100, int(value)))
+        print(f"Grid width set to {value}")
+        self.save_config()
+    
+    def set_grid_height(self, value):
+        """Set the grid height."""
+        self.config["grid"]["height"] = max(10, min(100, int(value)))
+        print(f"Grid height set to {value}")
+        self.save_config()
+    
     def set_grid_size(self, width, height):
         """Set the grid dimensions."""
         self.config["grid"]["width"] = max(10, min(100, width))  # Limit between 10 and 100
@@ -91,12 +103,17 @@ class ConfigManager:
     def set_initial_count(self, organism_type, count):
         """Set the initial count for a specific organism type."""
         if organism_type in self.config["initial_counts"]:
-            self.config["initial_counts"][organism_type] = max(0, min(100, count))
+            count = max(0, min(200, count))  # Allow up to 200 organisms
+            self.config["initial_counts"][organism_type] = count
+            print(f"Set initial {organism_type} count to {count}")
             self.save_config()
     
-    def set_simulation_speed(self, speed):
-        """Set the simulation speed."""
-        self.config["simulation"]["speed"] = max(0.1, min(2.0, speed))
+    def set_simulation_speed(self, value):
+        """Set the simulation speed setting."""
+        # Ensure value is between 0.1 and 5.0 (was previously limited to a lower value)
+        value = max(0.1, min(5.0, float(value)))
+        self.config["simulation"]["speed"] = value
+        print(f"Simulation speed set to {value}")
         self.save_config()
     
     def set_fps(self, fps):

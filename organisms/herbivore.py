@@ -68,7 +68,9 @@ class Herbivore:
         if self.energy <= 0:
             return
         if self.age > self.max_lifespan:
-            environment[self.x, self.y] += CONSUMER_NUTRIENT_RELEASE
+            # Add nutrients back to environment when dying of old age
+            # Use [y, x] order for NumPy arrays
+            environment[self.y, self.x] += CONSUMER_NUTRIENT_RELEASE
             self.energy = -1
             return
 
@@ -87,7 +89,8 @@ class Herbivore:
                         move_cost *= DISEASE_ENERGY_DRAIN_MULTIPLIER
                     self.energy -= move_cost
                     if self.energy <= 0:
-                        environment[self.x, self.y] += CONSUMER_NUTRIENT_RELEASE
+                        # Add nutrients back to environment when dying of starvation during movement
+                        environment[self.y, self.x] += CONSUMER_NUTRIENT_RELEASE
                         return
                     if self.check_and_eat_producer(producers):
                         break
@@ -101,7 +104,8 @@ class Herbivore:
                             move_cost *= DISEASE_ENERGY_DRAIN_MULTIPLIER
                         self.energy -= move_cost
                         if self.energy <= 0:
-                            environment[self.x, self.y] += CONSUMER_NUTRIENT_RELEASE
+                            # Add nutrients back to environment when dying of starvation during movement
+                            environment[self.y, self.x] += CONSUMER_NUTRIENT_RELEASE
                             return
                         if self.check_and_eat_producer(producers):
                             break
@@ -112,7 +116,8 @@ class Herbivore:
                         move_cost *= DISEASE_ENERGY_DRAIN_MULTIPLIER
                     self.energy -= move_cost
                     if self.energy <= 0:
-                        environment[self.x, self.y] += CONSUMER_NUTRIENT_RELEASE
+                        # Add nutrients back to environment when dying of starvation during movement
+                        environment[self.y, self.x] += CONSUMER_NUTRIENT_RELEASE
                         return
                     self.check_and_eat_producer(producers)
 
@@ -182,8 +187,15 @@ class Herbivore:
 
     def move_towards(self, direction, herbivores):
         dx, dy = direction
-        nx = (self.x + (1 if dx>0 else -1 if dx<0 else 0)) % GRID_WIDTH
-        ny = (self.y + (1 if dy>0 else -1 if dy<0 else 0)) % GRID_HEIGHT
+        
+        # Use dynamic grid dimensions
+        from utils.config_manager import ConfigManager
+        config = ConfigManager()
+        grid_width = config.get_grid_width()
+        grid_height = config.get_grid_height()
+        
+        nx = (self.x + (1 if dx>0 else -1 if dx<0 else 0)) % grid_width
+        ny = (self.y + (1 if dy>0 else -1 if dy<0 else 0)) % grid_height
         if not self.cell_occupied(nx, ny, herbivores):
             self.x, self.y = nx, ny
         else:
@@ -191,17 +203,24 @@ class Herbivore:
 
     def move_random(self, herbivores):
         tries = 5
+        
+        # Use dynamic grid dimensions
+        from utils.config_manager import ConfigManager
+        config = ConfigManager()
+        grid_width = config.get_grid_width()
+        grid_height = config.get_grid_height()
+        
         for _ in range(tries):
             d = random.choice(["UP","DOWN","LEFT","RIGHT"])
             nx, ny = self.x, self.y
             if d=="UP":
-                ny = (ny - 1) % GRID_HEIGHT
+                ny = (ny - 1) % grid_height
             elif d=="DOWN":
-                ny = (ny + 1) % GRID_HEIGHT
+                ny = (ny + 1) % grid_height
             elif d=="LEFT":
-                nx = (nx - 1) % GRID_WIDTH
+                nx = (nx - 1) % grid_width
             elif d=="RIGHT":
-                nx = (nx + 1) % GRID_WIDTH
+                nx = (nx + 1) % grid_width
             if not self.cell_occupied(nx, ny, herbivores):
                 self.x, self.y = nx, ny
                 return

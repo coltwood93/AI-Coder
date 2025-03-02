@@ -12,7 +12,7 @@ from utils.constants import (
     GRID_DISPLAY_WIDTH, GRID_DISPLAY_HEIGHT,
     STEP_BACK_KEY, STEP_FORWARD_KEY
 )
-from utils.app_states import MAIN_MENU, OPTIONS_MENU, SIMULATION, PAUSE_MENU, STATS_VIEW
+from utils.app_states import MAIN_MENU, MAIN_MENU_OPTIONS, OPTIONS_MENU, SIMULATION, PAUSE_MENU, STATS_VIEW
 
 class InputHandler:
     """Centralizes input handling for the simulation."""
@@ -22,6 +22,10 @@ class InputHandler:
     
     def handle_events(self, events, current_state, from_main_menu):
         """Process all pygame events and return updated state information."""
+        new_state = None
+        new_from_main_menu = None
+        continue_running = True
+
         for event in events:
             if event.type == pygame.QUIT:
                 return current_state, from_main_menu, False  # signal to quit
@@ -45,7 +49,7 @@ class InputHandler:
                         return result
         
         # Return unchanged state if no state changes occurred
-        return current_state, from_main_menu, True
+        return new_state, new_from_main_menu, continue_running
     
     def _handle_main_menu_input(self, event, from_main_menu):
         """Handle input in the main menu state."""
@@ -66,7 +70,7 @@ class InputHandler:
             return SIMULATION, from_main_menu, True
         elif event.key == pygame.K_o:
             print("Opening options from main menu")
-            return OPTIONS_MENU, True, True
+            return MAIN_MENU_OPTIONS, True, True
         elif event.key == pygame.K_q or event.key == pygame.K_ESCAPE:
             print("Quitting from main menu")
             return None, None, False  # Signal to quit
@@ -115,6 +119,9 @@ class InputHandler:
             self._handle_step_back()
         elif event.key == STEP_FORWARD_KEY:
             self._handle_step_forward()
+        elif event.key == pygame.K_o:
+            print("Opening options from simulation")
+            return OPTIONS_MENU, from_main_menu, True
         return None  # No state change
     
     def _handle_pause_menu_input(self, event, from_main_menu):
