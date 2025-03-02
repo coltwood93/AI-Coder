@@ -12,7 +12,8 @@ import numpy as np
 # Import constants needed for the main application
 from utils.constants import (
     WINDOW_WIDTH, WINDOW_HEIGHT, GRID_WIDTH, GRID_HEIGHT, CELL_SIZE, 
-    STATS_PANEL_WIDTH, FPS, SIMULATION_SPEED, update_from_config
+    STATS_PANEL_WIDTH, FPS, SIMULATION_SPEED, update_from_config,
+    MAX_TIMESTEPS  # Add this import
 )
 
 # Import app states
@@ -170,6 +171,7 @@ class SimulationApp:
             # Always get latest values directly from config_manager
             current_fps = self.config_manager.get_fps()
             current_speed = self.config_manager.get_simulation_speed()
+            current_step_skip = self.config_manager.get_step_skip()
             
             # Reset frame counter if not exists
             if not hasattr(self, 'frame_counter'):
@@ -187,15 +189,33 @@ class SimulationApp:
                 self.frame_counter = 0
                 # Print debug info periodically
                 if self.simulation.current_step % 10 == 0:
-                    print(f"Speed={current_speed}, FPS={current_fps}, Update interval={update_interval}")
+                    print(f"Speed={current_speed}, FPS={current_fps}, Skip={current_step_skip}, Update interval={update_interval}")
                 
                 # Update simulation
                 if self.simulation.is_replaying:
+                    # Handle replay mode normally - one step at a time
                     if self.simulation.current_step < len(self.simulation.history) - 1:
                         print(f"Replaying step: {self.simulation.current_step+1}")
                         self.simulation.step_forward()
                 else:
-                    self.simulation.step_simulation()
+                    # Single step update that returns whether this step should be displayed
+                    should_display = self.simulation.step_simulation()
+                    
+                    # If this step shouldn't be displayed, skip the rendering update
+                    if not should_display:
+                        # We need to update once more to ensure we're on a display step
+                        # Use a safety limit instead of MAX_TIMESTEPS
+                        safety_count = 0
+                        safety_limit = 100  # Prevent infinite loops
+                        
+                        while not should_display and safety_count < safety_limit:
+                            if self.simulation.current_step % 25 == 0:  # Log occasionally to avoid flooding
+                                print(f"Skipping render for step {self.simulation.current_step}")
+                            should_display = self.simulation.step_simulation()
+                            safety_count += 1
+                        
+                        if safety_count >= safety_limit:
+                            print(f"Warning: Reached safety limit of {safety_limit} steps without display update")
     
     def _render_current_state(self):
         """Render the appropriate screen based on current state."""

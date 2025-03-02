@@ -126,8 +126,6 @@ class InputHandler:
     
     def _handle_pause_menu_input(self, event, from_main_menu):
         """Handle input in the pause menu state."""
-        app = self._find_app_instance()
-        
         if event.key in (pygame.K_r, pygame.K_p, pygame.K_ESCAPE):
             print("Resuming simulation from pause menu")
             return SIMULATION, from_main_menu, True
@@ -135,6 +133,7 @@ class InputHandler:
             print("Restarting simulation")
             self.sim.reset()
             # Update app state if found
+            app = self._find_app_instance()
             if app:
                 app.has_simulation_started = True
             return SIMULATION, from_main_menu, True

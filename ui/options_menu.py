@@ -20,6 +20,7 @@ class OptionsMenu:
              lambda v: self.config_manager.set_simulation_speed(v)),
             ("FPS", lambda: self.config_manager.get_fps(), 
              lambda v: self.config_manager.set_fps(v)),
+            ("Skip Steps", self._get_step_skip, self._set_step_skip),  # Add skip steps option
             ("Return", None, None)  # Special option to return
         ]
         
@@ -154,3 +155,22 @@ class OptionsMenu:
         version_surf = self.font.render(version_text, True, (150, 150, 150))
         version_rect = version_surf.get_rect(midbottom=(WINDOW_WIDTH // 2, WINDOW_HEIGHT - 20))
         surface.blit(version_surf, version_rect)
+    
+    def _get_step_skip(self):
+        """Get the step skip setting."""
+        return str(self.config_manager.get_step_skip())
+
+    def _set_step_skip(self, value):
+        """Set the step skip setting."""
+        try:
+            skip = int(value)
+            if 1 <= skip <= 20:
+                self.config_manager.set_step_skip(skip)
+                print(f"Set step skip to {skip}")
+                return True
+            else:
+                print("Step skip must be between 1 and 20")
+                return False
+        except ValueError:
+            print("Invalid step skip value")
+            return False

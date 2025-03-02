@@ -48,6 +48,9 @@ class SimulationManager:
         # Add a population history tracker
         self.population_history = []
         
+        # Add skip counter
+        self.step_counter = 0
+        
         # Initialize organisms
         self._initialize_organisms()
         
@@ -161,6 +164,11 @@ class SimulationManager:
         if self.current_step >= MAX_TIMESTEPS:
             return False
         
+        # Get current step skip value from config
+        from utils.config_manager import ConfigManager
+        config = ConfigManager()
+        step_skip = config.get_step_skip()
+        
         # Calculate season and spawn chance
         season = current_season(self.current_step)
         if season == "WINTER":
@@ -189,19 +197,27 @@ class SimulationManager:
         
         # Increment step counter
         self.current_step += 1
+        self.step_counter += 1
         
-        # Store current state
+        # Calculate if this is a step we should display based on the skip setting
+        should_display = (self.step_counter >= step_skip)
+        
+        # Always store the state in history for proper step-by-step navigation
         self._store_current_state()
-        self._store_population_stats()  # Store population stats
+        self._store_population_stats()
         
-        # Log stats
+        # Reset step counter if we should display this frame
+        if should_display:
+            self.step_counter = 0
+        
+        # Always log stats to CSV to maintain continuity
         log_and_print_stats(
             self.current_step, 
             self.producers, self.herbivores, self.carnivores, self.omnivores, 
             self.csv_writer
         )
         
-        return True
+        return should_display  # Return whether we should display this step
     
     def _update_producers(self):
         """Update all producers."""

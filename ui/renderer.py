@@ -47,10 +47,15 @@ class SimulationRenderer:
         self._render_carnivores(carnivores, actual_cell_size, x_offset, y_offset)
         self._render_omnivores(omnivores, actual_cell_size, x_offset, y_offset)
         
-        # Render stats panel
+        # Get current step skip setting
+        from utils.config_manager import ConfigManager
+        config = ConfigManager()
+        step_skip = config.get_step_skip()
+        
+        # Render stats panel with step skip information
         self._render_stats_panel(
             producers, herbivores, carnivores, omnivores,
-            current_step, is_paused, is_replaying
+            current_step, is_paused, is_replaying, step_skip
         )
     
     def render_menu(self, menu_type, items, title, background_color=(0, 0, 50), title_color=(255, 255, 255)):
@@ -247,7 +252,7 @@ class SimulationRenderer:
         self.screen.blit(text_surf, text_rect)
     
     def _render_stats_panel(self, producers, herbivores, carnivores, omnivores, 
-                          current_step, is_paused, is_replaying):
+                          current_step, is_paused, is_replaying, step_skip=1):
         """Render the scrollable stats panel with organism statistics."""
         panel_x = GRID_DISPLAY_WIDTH  # Use the calculated display width, not grid width * cell size
         panel_width = STATS_PANEL_WIDTH
@@ -276,7 +281,8 @@ class SimulationRenderer:
             f"Timestep: {current_step}",
             f"Season: {season_now}",
             f"Status: {status_str}",
-            f"Replay Mode: {'ON' if is_replaying else 'OFF'}"
+            f"Replay Mode: {'ON' if is_replaying else 'OFF'}",
+            f"Displaying: every {step_skip} steps"  # Show the skip setting
         ]
         row_y = self._draw_section_lines(stats_panel, info_lines, row_y)
         row_y += 20  # Extra spacing

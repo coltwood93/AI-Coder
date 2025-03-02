@@ -25,6 +25,8 @@ class MainMenuOptions:
              lambda v: self.config_manager.set_initial_count("omnivores", int(v))),
             ("Simulation Speed", lambda: self.config_manager.get_simulation_speed(),
              lambda v: self.config_manager.set_simulation_speed(float(v))),
+            ("Skip Steps", lambda: self.config_manager.get_step_skip(),
+             lambda v: self.config_manager.set_step_skip(int(v))),
             ("FPS", lambda: self.config_manager.get_fps(),
              lambda v: self.config_manager.set_fps(int(v))),
             ("Return", None, None)

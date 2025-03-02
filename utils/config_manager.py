@@ -29,7 +29,8 @@ class ConfigManager:
             },
             "simulation": {
                 "speed": SIMULATION_SPEED,
-                "fps": FPS
+                "fps": FPS,
+                "step_skip": 1  # Default to showing every step
             }
         }
         self.load_config()
@@ -82,6 +83,10 @@ class ConfigManager:
         """Get the frames per second setting."""
         return self.config["simulation"]["fps"]
     
+    def get_step_skip(self):
+        """Get the simulation step skip setting."""
+        return self.config["simulation"].get("step_skip", 1)
+    
     def set_grid_width(self, value):
         """Set the grid width."""
         self.config["grid"]["width"] = max(10, min(100, int(value)))
@@ -119,4 +124,11 @@ class ConfigManager:
     def set_fps(self, fps):
         """Set the frames per second."""
         self.config["simulation"]["fps"] = max(5, min(60, fps))
+        self.save_config()
+    
+    def set_step_skip(self, value):
+        """Set the simulation step skip setting."""
+        value = max(1, min(20, int(value)))  # Limit between 1 and 20
+        self.config["simulation"]["step_skip"] = value
+        print(f"Step skip set to {value}")
         self.save_config()
