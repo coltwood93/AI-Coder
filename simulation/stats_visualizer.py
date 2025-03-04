@@ -3,8 +3,6 @@ Visualization tools for simulation statistics.
 """
 
 import pygame
-import numpy as np
-from utils.constants import WINDOW_WIDTH, WINDOW_HEIGHT
 
 class SimulationGraphRenderer:
     """Class to handle rendering statistical graphs for the simulation."""
@@ -110,7 +108,8 @@ class SimulationGraphRenderer:
             num_labels = 5
             steps_interval = max(1, len(steps) // num_labels)
             for i in range(0, len(steps), steps_interval):
-                if i >= len(steps): break
+                if i >= len(steps): 
+                    break
                 step_x = x + margin_left + (i * graph_width // len(steps))
                 step_text = self.font.render(f"{steps[i]}", True, (200, 200, 200))
                 text_rect = step_text.get_rect(midtop=(step_x, y + height - margin_bottom + 5))

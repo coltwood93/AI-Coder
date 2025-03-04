@@ -5,7 +5,6 @@ Handles drawing the simulation grid, organisms, and UI elements.
 
 import pygame
 from utils.constants import (
-    GRID_WIDTH, GRID_HEIGHT, CELL_SIZE, CELL_SIZE_X, CELL_SIZE_Y,
     STATS_PANEL_WIDTH, WINDOW_WIDTH, WINDOW_HEIGHT,
     GRID_DISPLAY_WIDTH, GRID_DISPLAY_HEIGHT
 )

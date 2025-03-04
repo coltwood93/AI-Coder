@@ -2,10 +2,9 @@
 """
 Run all tests for the A-Life project.
 """
-import sys
 import os
+import sys  # Add missing import
 import unittest
-import importlib
 
 def run_all_tests():
     """Run all tests in the tests directory."""
@@ -33,7 +32,7 @@ if __name__ == "__main__":
         import pygame
         pygame.init()
         print(f"{pygame.version.ver} (SDL {pygame.version.SDL})")
-        print(f"Hello from the pygame community. https://www.pygame.org/contribute.html")
+        print("Hello from the pygame community. https://www.pygame.org/contribute.html")
     except ImportError:
         print("Pygame not found - some tests might fail.")
     

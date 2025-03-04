@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 import sys
 import os
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 # Add project root to Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -13,8 +13,7 @@ from simulation.environment import (
 )
 from utils.constants import (
     GRID_WIDTH, GRID_HEIGHT, SEASON_LENGTH, 
-    DISEASE_DURATION, INITIAL_NUTRIENT_LEVEL,
-    NUTRIENT_DECAY_RATE, NUTRIENT_DIFFUSION_RATE
+    DISEASE_DURATION, INITIAL_NUTRIENT_LEVEL
 )
 
 class TestEnvironment(unittest.TestCase):

@@ -7,21 +7,16 @@ import sys
 import random
 import csv
 import pygame
-import numpy as np
 
 # Import constants needed for the main application
 from utils.constants import (
-    WINDOW_WIDTH, WINDOW_HEIGHT, GRID_WIDTH, GRID_HEIGHT, CELL_SIZE, 
-    STATS_PANEL_WIDTH, FPS, SIMULATION_SPEED, update_from_config,
-    MAX_TIMESTEPS  # Add this import
+    WINDOW_WIDTH, WINDOW_HEIGHT, update_from_config
 )
 
 # Import app states
 from utils.app_states import MAIN_MENU, OPTIONS_MENU, SIMULATION, PAUSE_MENU, STATS_VIEW
 
 # Import simulation components
-from simulation.environment import current_season
-from simulation.stats import calc_traits_avg
 from simulation.manager import SimulationManager
 
 # Import UI components

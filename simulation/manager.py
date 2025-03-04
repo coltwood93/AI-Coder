@@ -13,17 +13,17 @@ from organisms.carnivore import Carnivore
 from organisms.omnivore import Omnivore
 from utils.constants import (
     GRID_WIDTH, GRID_HEIGHT, INITIAL_NUTRIENT_LEVEL,
-    INITIAL_PRODUCERS, PRODUCER_INIT_ENERGY_RANGE,
-    INITIAL_HERBIVORES, HERBIVORE_INIT_ENERGY_RANGE,
-    INITIAL_CARNIVORES, CARNIVORE_INIT_ENERGY_RANGE,
-    INITIAL_OMNIVORES, OMNIVORE_INIT_ENERGY_RANGE,
+    PRODUCER_INIT_ENERGY_RANGE,
+    HERBIVORE_INIT_ENERGY_RANGE,
+    CARNIVORE_INIT_ENERGY_RANGE,
+    OMNIVORE_INIT_ENERGY_RANGE,
     DISEASE_CHANCE_PER_TURN, BASE_SPAWN_CHANCE_PER_TURN,
     WINTER_SPAWN_MULT, SUMMER_SPAWN_MULT, MAX_TIMESTEPS, CONSUMER_NUTRIENT_RELEASE
 )
 from simulation.environment import (
     current_season, update_environment, spawn_random_organism_on_border, disease_outbreak
 )
-from simulation.history import store_state, load_state_into_sim, SimulationState
+from simulation.history import store_state, load_state_into_sim
 from simulation.stats import log_and_print_stats, calc_traits_avg
 
 class SimulationManager:

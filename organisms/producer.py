@@ -1,6 +1,6 @@
 import random
 from utils.constants import (
-    GRID_WIDTH, GRID_HEIGHT, PRODUCER_ENERGY_GAIN, PRODUCER_MAX_ENERGY,
+    PRODUCER_ENERGY_GAIN, PRODUCER_MAX_ENERGY,
     PRODUCER_SEED_COST, PRODUCER_SEED_PROB, PRODUCER_INIT_ENERGY_RANGE,
     PRODUCER_NUTRIENT_CONSUMPTION
 )
@@ -22,8 +22,17 @@ class Producer:
         Producer.next_id += 1
 
     def update(self, producers, herbivores, carnivores, omnivores, environment):
-        # Always consume nutrients and gain energy
-        # Access environment as [y, x] since NumPy arrays are indexed as [row, column]
+        # Get current grid dimensions to ensure we don't go out of bounds
+        from utils.config_manager import ConfigManager
+        config = ConfigManager()
+        grid_width = config.get_grid_width()
+        grid_height = config.get_grid_height()
+        
+        # Ensure coordinates are within bounds (in case grid was resized)
+        self.x = self.x % grid_width
+        self.y = self.y % grid_height
+        
+        # Now safely access environment with validated coordinates
         nutrient_taken = min(environment[self.y, self.x], PRODUCER_NUTRIENT_CONSUMPTION)
         self.energy += nutrient_taken * PRODUCER_ENERGY_GAIN
         environment[self.y, self.x] -= nutrient_taken
@@ -42,7 +51,6 @@ class Producer:
                 producers.append(baby)
 
     def random_adjacent(self):
-        """Find a random adjacent cell, using proper grid boundaries from environment."""
         dirs = [(-1,0),(1,0),(0,-1),(0,1),
                 (-1,-1),(1,1),(-1,1),(1,-1)]
         dx, dy = random.choice(dirs)

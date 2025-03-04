@@ -4,15 +4,14 @@ import sys
 import numpy as np
 import csv
 from io import StringIO
-from unittest.mock import patch, MagicMock, mock_open
+from unittest.mock import patch, mock_open
 
 # Add project root to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from simulation.manager import SimulationManager
 from utils.constants import (
-    GRID_WIDTH, GRID_HEIGHT, INITIAL_NUTRIENT_LEVEL,
-    INITIAL_PRODUCERS, INITIAL_HERBIVORES, INITIAL_CARNIVORES, INITIAL_OMNIVORES
+    GRID_WIDTH, GRID_HEIGHT, INITIAL_NUTRIENT_LEVEL
 )
 
 class MockProducer:

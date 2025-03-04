@@ -1,8 +1,5 @@
 import unittest
-import numpy as np
-import random
-from unittest.mock import patch
-from deap import base, creator, tools
+from deap import base, creator
 from utils.toolbox import toolbox
 
 # Get the actual ranges from constants

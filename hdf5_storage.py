@@ -14,7 +14,7 @@ class HDF5Storage:
         # Create the file if it doesn't exist
         if not os.path.exists(filename):
             try:
-                with h5py.File(filename, 'w') as f:
+                with h5py.File(filename, 'w'):
                     pass  # Just create the file
             except Exception as e:
                 print(f"Warning: Failed to create HDF5 file: {e}")
@@ -114,7 +114,7 @@ class HDF5Storage:
         """Reset the storage by creating a new empty file."""
         try:
             # Create the file, overwriting any existing file
-            with h5py.File(self.filename, 'w') as f:
+            with h5py.File(self.filename, 'w'):
                 pass  # Just create an empty file
             print(f"HDF5 storage reset: {self.filename}")
         except Exception as e:

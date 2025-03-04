@@ -2,7 +2,7 @@ import random
 import copy
 from deap import creator
 from utils.constants import (
-    GRID_WIDTH, GRID_HEIGHT, BASE_LIFE_COST, DISEASE_ENERGY_DRAIN_MULTIPLIER,
+    BASE_LIFE_COST, DISEASE_ENERGY_DRAIN_MULTIPLIER,
     MOVE_COST_FACTOR, CRITICAL_ENERGY, DISCOVERY_BONUS, TRACK_CELL_HISTORY_LEN,
     HERBIVORE_REPRO_THRESHOLD, EAT_GAIN_HERBIVORE, MAX_LIFESPAN_HERBIVORE,
     REPRODUCTION_COOLDOWN, CONSUMER_NUTRIENT_RELEASE
@@ -54,6 +54,16 @@ class Herbivore:
         return self.disease_timer > 0
 
     def update(self, producers, herbivores, carnivores, omnivores, environment):
+        # Get current grid dimensions to ensure we don't go out of bounds
+        from utils.config_manager import ConfigManager
+        config = ConfigManager()
+        grid_width = config.get_grid_width()
+        grid_height = config.get_grid_height()
+        
+        # Ensure coordinates are within bounds (in case grid was resized)
+        self.x = self.x % grid_width
+        self.y = self.y % grid_height
+        
         # baseline cost
         life_cost = BASE_LIFE_COST
         if self.is_infected():
@@ -68,8 +78,6 @@ class Herbivore:
         if self.energy <= 0:
             return
         if self.age > self.max_lifespan:
-            # Add nutrients back to environment when dying of old age
-            # Use [y, x] order for NumPy arrays
             environment[self.y, self.x] += CONSUMER_NUTRIENT_RELEASE
             self.energy = -1
             return
@@ -89,7 +97,6 @@ class Herbivore:
                         move_cost *= DISEASE_ENERGY_DRAIN_MULTIPLIER
                     self.energy -= move_cost
                     if self.energy <= 0:
-                        # Add nutrients back to environment when dying of starvation during movement
                         environment[self.y, self.x] += CONSUMER_NUTRIENT_RELEASE
                         return
                     if self.check_and_eat_producer(producers):
@@ -104,7 +111,6 @@ class Herbivore:
                             move_cost *= DISEASE_ENERGY_DRAIN_MULTIPLIER
                         self.energy -= move_cost
                         if self.energy <= 0:
-                            # Add nutrients back to environment when dying of starvation during movement
                             environment[self.y, self.x] += CONSUMER_NUTRIENT_RELEASE
                             return
                         if self.check_and_eat_producer(producers):
@@ -116,7 +122,6 @@ class Herbivore:
                         move_cost *= DISEASE_ENERGY_DRAIN_MULTIPLIER
                     self.energy -= move_cost
                     if self.energy <= 0:
-                        # Add nutrients back to environment when dying of starvation during movement
                         environment[self.y, self.x] += CONSUMER_NUTRIENT_RELEASE
                         return
                     self.check_and_eat_producer(producers)
