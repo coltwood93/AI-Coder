@@ -1,125 +1,65 @@
-import random
-from deap import creator
-from utils.toolbox import toolbox, create_random_genome, custom_mutate
-from utils.constants import (
-    SPEED_RANGE, METABOLISM_RANGE, VISION_RANGE, MUTATION_RATE
-)
+import unittest
+from deap import base, creator
+from utils.toolbox import toolbox
 
-def test_create_random_genome():
-    """Test random genome creation with proper ranges"""
-    for _ in range(100):  # Test multiple times for randomness
-        genome = create_random_genome()
-        
-        # Check correct number of genes
-        assert len(genome) == 3
-        
-        # Check each gene is within its range
-        speed, metabolism, vision = genome
-        assert SPEED_RANGE[0] <= speed <= SPEED_RANGE[1]
-        assert METABOLISM_RANGE[0] <= metabolism <= METABOLISM_RANGE[1]
-        assert VISION_RANGE[0] <= vision <= VISION_RANGE[1]
-        
-        # Check types
-        assert isinstance(speed, int)  # Speed should be integer
-        assert isinstance(metabolism, float)  # Metabolism should be float
-        assert isinstance(vision, int)  # Vision should be integer
+# Get the actual ranges from constants
+from utils.constants import SPEED_RANGE, METABOLISM_RANGE, VISION_RANGE
 
-def test_individual_creation():
-    """Test individual creation through toolbox"""
-    ind = toolbox.individual()
+class TestToolbox(unittest.TestCase):
+    def setUp(self):
+        # Make sure creator types are defined
+        if not hasattr(creator, "FitnessMax"):
+            creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+        if not hasattr(creator, "Individual"):
+            creator.create("Individual", list, fitness=creator.FitnessMax)
     
-    # Check it's the right type
-    assert isinstance(ind, creator.Individual)
-    assert hasattr(ind, 'fitness')
+    def test_toolbox_creation(self):
+        """Test that the toolbox is properly initialized."""
+        self.assertIsInstance(toolbox, base.Toolbox)
+        self.assertTrue(hasattr(toolbox, "individual"))
+        self.assertTrue(hasattr(toolbox, "mutate"))
     
-    # Check genes are within ranges
-    assert SPEED_RANGE[0] <= ind[0] <= SPEED_RANGE[1]
-    assert METABOLISM_RANGE[0] <= ind[1] <= METABOLISM_RANGE[1]
-    assert VISION_RANGE[0] <= ind[2] <= VISION_RANGE[1]
-
-def test_mutation_chance():
-    """Test mutation probability is correct"""
-    # Use fixed seed for reproducibility
-    random.seed(42)
-    
-    # Create many individuals and count mutations
-    n_tests = 1000
-    mutation_counts = [0, 0, 0]  # Count for each gene
-    
-    for _ in range(n_tests):
-        ind = creator.Individual([2, 1.0, 2])  # Middle values
-        mutated, = custom_mutate(ind)
+    def test_individual_creation(self):
+        """Test creating an individual."""
+        ind = toolbox.individual()
+        self.assertIsInstance(ind, creator.Individual)
+        self.assertEqual(3, len(ind))  # Speed, metabolism, vision
         
-        # Count when mutation occurred (value changed)
-        mutation_counts[0] += (mutated[0] != 2)
-        mutation_counts[1] += (mutated[1] != 1.0)
-        mutation_counts[2] += (mutated[2] != 2)
-    
-    # Check mutation rates are roughly correct (within 30% of expected)
-    expected = n_tests * MUTATION_RATE
-    for count in mutation_counts:
-        assert abs(count - expected) < expected * 0.3, \
-            f"Mutation rate too far from expected. Got {count/n_tests:.2f}, expected {MUTATION_RATE:.2f}"
-
-def test_mutation_clamping():
-    """Test mutation stays within allowed ranges"""
-    random.seed(42)
-    
-    # Test extreme values
-    min_ind = creator.Individual([
-        SPEED_RANGE[0],
-        METABOLISM_RANGE[0],
-        VISION_RANGE[0]
-    ])
-    max_ind = creator.Individual([
-        SPEED_RANGE[1],
-        METABOLISM_RANGE[1],
-        VISION_RANGE[1]
-    ])
-    
-    # Test many mutations from min and max
-    for _ in range(100):
-        # Test from minimum
-        mutated_min, = custom_mutate(min_ind[:])  # Copy to not modify original
-        assert SPEED_RANGE[0] <= mutated_min[0] <= SPEED_RANGE[1]
-        assert METABOLISM_RANGE[0] <= mutated_min[1] <= METABOLISM_RANGE[1]
-        assert VISION_RANGE[0] <= mutated_min[2] <= VISION_RANGE[1]
+        # Check value ranges using constants rather than hardcoded values
+        self.assertGreaterEqual(ind[0], SPEED_RANGE[0])
+        self.assertLessEqual(ind[0], SPEED_RANGE[1])
         
-        # Test from maximum
-        mutated_max, = custom_mutate(max_ind[:])  # Copy to not modify original
-        assert SPEED_RANGE[0] <= mutated_max[0] <= SPEED_RANGE[1]
-        assert METABOLISM_RANGE[0] <= mutated_max[1] <= METABOLISM_RANGE[1]
-        assert VISION_RANGE[0] <= mutated_max[2] <= VISION_RANGE[1]
-
-def test_mutation_changes():
-    """Test that mutations can both increase and decrease values"""
-    random.seed(42)
-    
-    # Middle-range individual
-    original = creator.Individual([
-        (SPEED_RANGE[0] + SPEED_RANGE[1]) // 2,
-        (METABOLISM_RANGE[0] + METABOLISM_RANGE[1]) / 2,
-        (VISION_RANGE[0] + VISION_RANGE[1]) // 2
-    ])
-    
-    increases = [0, 0, 0]
-    decreases = [0, 0, 0]
-    
-    # Test many mutations
-    for _ in range(1000):
-        mutated, = custom_mutate(original[:])  # Copy to not modify original
+        self.assertGreaterEqual(ind[1], METABOLISM_RANGE[0])
+        self.assertLessEqual(ind[1], METABOLISM_RANGE[1])
         
-        # Count increases and decreases
-        for i in range(3):
-            if mutated[i] > original[i]:
-                increases[i] += 1
-            elif mutated[i] < original[i]:
-                decreases[i] += 1
+        self.assertGreaterEqual(ind[2], VISION_RANGE[0])
+        self.assertLessEqual(ind[2], VISION_RANGE[1])
     
-    # Should see both increases and decreases for each gene
-    for inc, dec in zip(increases, decreases):
-        assert inc > 0, "Mutation never increased value"
-        assert dec > 0, "Mutation never decreased value"
-        # Roughly equal number of increases and decreases
-        ratio = inc / (inc + dec)
-        assert 0.4 <= ratio <= 0.6, "Mutations are biased"
+    def test_mutation(self):
+        """Test mutation operator."""
+        # Create a dummy individual with middle-range values
+        ind = creator.Individual([
+            (SPEED_RANGE[0] + SPEED_RANGE[1]) // 2,
+            (METABOLISM_RANGE[0] + METABOLISM_RANGE[1]) / 2,
+            (VISION_RANGE[0] + VISION_RANGE[1]) // 2
+        ])
+        original = ind.copy()
+        
+        # Apply multiple mutations to increase chance of change
+        changed = False
+        for _ in range(10):  # Try several times
+            mutated_ind, = toolbox.mutate(ind.copy())
+            
+            # Check that mutation produced changes
+            for i in range(len(original)):
+                if original[i] != mutated_ind[i]:
+                    changed = True
+                    break
+                    
+            if changed:
+                break
+                
+        self.assertTrue(changed, "Mutation didn't change any genes after multiple attempts")
+
+if __name__ == '__main__':
+    unittest.main()

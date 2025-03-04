@@ -2,7 +2,7 @@ import random
 import copy
 from deap import creator
 from utils.constants import (
-    GRID_WIDTH, GRID_HEIGHT, BASE_LIFE_COST, DISEASE_ENERGY_DRAIN_MULTIPLIER,
+    BASE_LIFE_COST, DISEASE_ENERGY_DRAIN_MULTIPLIER,
     MOVE_COST_FACTOR, CRITICAL_ENERGY, DISCOVERY_BONUS, TRACK_CELL_HISTORY_LEN,
     HERBIVORE_REPRO_THRESHOLD, EAT_GAIN_HERBIVORE, MAX_LIFESPAN_HERBIVORE,
     REPRODUCTION_COOLDOWN, CONSUMER_NUTRIENT_RELEASE
@@ -10,7 +10,14 @@ from utils.constants import (
 from utils.toolbox import toolbox
 
 class Herbivore:
+    # Class variable to track organism IDs
     next_id = 0
+    
+    @classmethod
+    def reset_id_counter(cls):
+        """Reset the ID counter to 0."""
+        cls.next_id = 0
+
     def __init__(self, x, y, energy=10, genes=None, generation=0):
         self.x = x
         self.y = y
@@ -47,6 +54,16 @@ class Herbivore:
         return self.disease_timer > 0
 
     def update(self, producers, herbivores, carnivores, omnivores, environment):
+        # Get current grid dimensions to ensure we don't go out of bounds
+        from utils.config_manager import ConfigManager
+        config = ConfigManager()
+        grid_width = config.get_grid_width()
+        grid_height = config.get_grid_height()
+        
+        # Ensure coordinates are within bounds (in case grid was resized)
+        self.x = self.x % grid_width
+        self.y = self.y % grid_height
+        
         # baseline cost
         life_cost = BASE_LIFE_COST
         if self.is_infected():
@@ -61,7 +78,7 @@ class Herbivore:
         if self.energy <= 0:
             return
         if self.age > self.max_lifespan:
-            environment[self.x, self.y] += CONSUMER_NUTRIENT_RELEASE
+            environment[self.y, self.x] += CONSUMER_NUTRIENT_RELEASE
             self.energy = -1
             return
 
@@ -80,7 +97,7 @@ class Herbivore:
                         move_cost *= DISEASE_ENERGY_DRAIN_MULTIPLIER
                     self.energy -= move_cost
                     if self.energy <= 0:
-                        environment[self.x, self.y] += CONSUMER_NUTRIENT_RELEASE
+                        environment[self.y, self.x] += CONSUMER_NUTRIENT_RELEASE
                         return
                     if self.check_and_eat_producer(producers):
                         break
@@ -94,7 +111,7 @@ class Herbivore:
                             move_cost *= DISEASE_ENERGY_DRAIN_MULTIPLIER
                         self.energy -= move_cost
                         if self.energy <= 0:
-                            environment[self.x, self.y] += CONSUMER_NUTRIENT_RELEASE
+                            environment[self.y, self.x] += CONSUMER_NUTRIENT_RELEASE
                             return
                         if self.check_and_eat_producer(producers):
                             break
@@ -105,7 +122,7 @@ class Herbivore:
                         move_cost *= DISEASE_ENERGY_DRAIN_MULTIPLIER
                     self.energy -= move_cost
                     if self.energy <= 0:
-                        environment[self.x, self.y] += CONSUMER_NUTRIENT_RELEASE
+                        environment[self.y, self.x] += CONSUMER_NUTRIENT_RELEASE
                         return
                     self.check_and_eat_producer(producers)
 
@@ -175,8 +192,15 @@ class Herbivore:
 
     def move_towards(self, direction, herbivores):
         dx, dy = direction
-        nx = (self.x + (1 if dx>0 else -1 if dx<0 else 0)) % GRID_WIDTH
-        ny = (self.y + (1 if dy>0 else -1 if dy<0 else 0)) % GRID_HEIGHT
+        
+        # Use dynamic grid dimensions
+        from utils.config_manager import ConfigManager
+        config = ConfigManager()
+        grid_width = config.get_grid_width()
+        grid_height = config.get_grid_height()
+        
+        nx = (self.x + (1 if dx>0 else -1 if dx<0 else 0)) % grid_width
+        ny = (self.y + (1 if dy>0 else -1 if dy<0 else 0)) % grid_height
         if not self.cell_occupied(nx, ny, herbivores):
             self.x, self.y = nx, ny
         else:
@@ -184,17 +208,24 @@ class Herbivore:
 
     def move_random(self, herbivores):
         tries = 5
+        
+        # Use dynamic grid dimensions
+        from utils.config_manager import ConfigManager
+        config = ConfigManager()
+        grid_width = config.get_grid_width()
+        grid_height = config.get_grid_height()
+        
         for _ in range(tries):
             d = random.choice(["UP","DOWN","LEFT","RIGHT"])
             nx, ny = self.x, self.y
             if d=="UP":
-                ny = (ny - 1) % GRID_HEIGHT
+                ny = (ny - 1) % grid_height
             elif d=="DOWN":
-                ny = (ny + 1) % GRID_HEIGHT
+                ny = (ny + 1) % grid_height
             elif d=="LEFT":
-                nx = (nx - 1) % GRID_WIDTH
+                nx = (nx - 1) % grid_width
             elif d=="RIGHT":
-                nx = (nx + 1) % GRID_WIDTH
+                nx = (nx + 1) % grid_width
             if not self.cell_occupied(nx, ny, herbivores):
                 self.x, self.y = nx, ny
                 return
