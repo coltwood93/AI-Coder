@@ -336,11 +336,10 @@ class SimulationManager:
         except Exception as e:
             print(f"Warning: Error creating new HDF5 store: {e}")
         
-        # Reset the frame counter in the main app if it exists
-        import gc
-        for obj in gc.get_objects():
-            if hasattr(obj, 'frame_counter'):
-                obj.frame_counter = 0
+        # Instead of gc.get_objects(), do something like:
+        for org in (self.producers + self.herbivores + self.carnivores + self.omnivores):
+            if hasattr(org, 'frame_counter'):
+                org.frame_counter = 0
         
         # Reset the ID counters in all organism classes
         self._reset_organism_id_counters()
