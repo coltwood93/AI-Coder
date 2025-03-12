@@ -1,4 +1,3 @@
-
 # For testing, we keep DummyOrganism here.
 # In your simulation, you would import your actual Consumer class.
 class DummyOrganism:
@@ -203,3 +202,10 @@ class MemoryResidentSimulationStore:
         else:
             consumer["x"] = new_position[0]
             consumer["y"] = new_position[1]
+    
+    def reset(self):
+        """Reset the memory store to initial state."""
+        self.mode = "live"
+        self.states = {}
+        self.current_timestep = None
+        print("Memory store reset complete")

@@ -1,8 +1,8 @@
-import random
 import copy
+import random  # Add import for random
 from deap import creator
 from utils.constants import (
-    GRID_WIDTH, GRID_HEIGHT, BASE_LIFE_COST, DISEASE_ENERGY_DRAIN_MULTIPLIER,
+    BASE_LIFE_COST, DISEASE_ENERGY_DRAIN_MULTIPLIER,
     MOVE_COST_FACTOR, CRITICAL_ENERGY, DISCOVERY_BONUS, TRACK_CELL_HISTORY_LEN,
     OMNIVORE_REPRO_THRESHOLD, EAT_GAIN_OMNIVORE_PLANT, EAT_GAIN_OMNIVORE_ANIMAL,
     MAX_LIFESPAN_OMNIVORE, REPRODUCTION_COOLDOWN, EAT_GAIN_CARNIVORE, CONSUMER_NUTRIENT_RELEASE
@@ -10,7 +10,14 @@ from utils.constants import (
 from utils.toolbox import toolbox
 
 class Omnivore:
+    # Class variable to track organism IDs
     next_id = 0
+    
+    @classmethod
+    def reset_id_counter(cls):
+        """Reset the ID counter to 0."""
+        cls.next_id = 0
+
     """
     NEW SPECIES: can eat both producers AND herbivores.
     Gains EAT_GAIN_OMNIVORE_PLANT from producers, EAT_GAIN_OMNIVORE_ANIMAL from herbivores.
@@ -55,6 +62,16 @@ class Omnivore:
         return self.disease_timer > 0
 
     def update(self, producers, herbivores, carnivores, omnivores, environment):
+        # Get current grid dimensions to ensure we don't go out of bounds
+        from utils.config_manager import ConfigManager
+        config = ConfigManager()
+        grid_width = config.get_grid_width()
+        grid_height = config.get_grid_height()
+        
+        # Ensure coordinates are within bounds (in case grid was resized)
+        self.x = self.x % grid_width
+        self.y = self.y % grid_height
+        
         # baseline cost
         life_cost = BASE_LIFE_COST
         if self.is_infected():
@@ -69,8 +86,8 @@ class Omnivore:
         if self.energy <= 0:
             return
         if self.age > self.max_lifespan:
-            # Add nutrients back to environment when dying of old age
-            environment[self.x, self.y] += CONSUMER_NUTRIENT_RELEASE
+            # Add nutrients back to environment when dying of old age - use [y, x] order
+            environment[self.y, self.x] += CONSUMER_NUTRIENT_RELEASE
             self.energy = -1
             return
 
@@ -104,7 +121,7 @@ class Omnivore:
                 self.energy -= move_cost
                 if self.energy <= 0:
                     # Add nutrients back to environment when dying of starvation during movement
-                    environment[self.x, self.y] += CONSUMER_NUTRIENT_RELEASE
+                    environment[self.y, self.x] += CONSUMER_NUTRIENT_RELEASE
                     return
 
                 if target_type == "HERB":
@@ -125,7 +142,7 @@ class Omnivore:
                     self.energy -= move_cost
                     if self.energy <= 0:
                         # Add nutrients back to environment when dying of starvation during movement
-                        environment[self.x, self.y] += CONSUMER_NUTRIENT_RELEASE
+                        environment[self.y, self.x] += CONSUMER_NUTRIENT_RELEASE
                         return
                     # possibly ate something
                     if self.check_and_eat_herb(herbivores):
@@ -140,7 +157,7 @@ class Omnivore:
                 self.energy -= move_cost
                 if self.energy <= 0:
                     # Add nutrients back to environment when dying of starvation during movement
-                    environment[self.x, self.y] += CONSUMER_NUTRIENT_RELEASE
+                    environment[self.y, self.x] += CONSUMER_NUTRIENT_RELEASE
                     return
                 self.check_and_eat_herb(herbivores)
                 self.check_and_eat_plant(producers)
@@ -214,8 +231,15 @@ class Omnivore:
 
     def move_towards(self, direction, omnivores):
         dx, dy = direction
-        nx = (self.x + (1 if dx>0 else -1 if dx<0 else 0)) % GRID_WIDTH
-        ny = (self.y + (1 if dy>0 else -1 if dy<0 else 0)) % GRID_HEIGHT
+        
+        # Use dynamic grid dimensions
+        from utils.config_manager import ConfigManager
+        config = ConfigManager()
+        grid_width = config.get_grid_width()
+        grid_height = config.get_grid_height()
+        
+        nx = (self.x + (1 if dx>0 else -1 if dx<0 else 0)) % grid_width
+        ny = (self.y + (1 if dy>0 else -1 if dy<0 else 0)) % grid_height
         if not self.cell_occupied(nx, ny, omnivores):
             self.x, self.y = nx, ny
         else:
@@ -223,17 +247,24 @@ class Omnivore:
 
     def move_random(self, omnivores):
         tries = 5
+        
+        # Use dynamic grid dimensions
+        from utils.config_manager import ConfigManager
+        config = ConfigManager()
+        grid_width = config.get_grid_width()
+        grid_height = config.get_grid_height()
+        
         for _ in range(tries):
             d = random.choice(["UP","DOWN","LEFT","RIGHT"])
             nx, ny = self.x, self.y
             if d=="UP":
-                ny = (ny - 1) % GRID_HEIGHT
+                ny = (ny - 1) % grid_height
             elif d=="DOWN":
-                ny = (ny + 1) % GRID_HEIGHT
+                ny = (ny + 1) % grid_height
             elif d=="LEFT":
-                nx = (nx - 1) % GRID_WIDTH
+                nx = (nx - 1) % grid_width
             elif d=="RIGHT":
-                nx = (nx + 1) % GRID_WIDTH
+                nx = (nx + 1) % grid_width
             if not self.cell_occupied(nx, ny, omnivores):
                 self.x, self.y = nx, ny
                 return

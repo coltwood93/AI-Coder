@@ -1,8 +1,8 @@
-import random
 import copy
+import random  # Add import for random
 from deap import creator
 from utils.constants import (
-    GRID_WIDTH, GRID_HEIGHT, BASE_LIFE_COST, DISEASE_ENERGY_DRAIN_MULTIPLIER,
+    BASE_LIFE_COST, DISEASE_ENERGY_DRAIN_MULTIPLIER,
     MOVE_COST_FACTOR, CRITICAL_ENERGY, DISCOVERY_BONUS, TRACK_CELL_HISTORY_LEN,
     CARNIVORE_REPRO_THRESHOLD, EAT_GAIN_CARNIVORE, MAX_LIFESPAN_CARNIVORE,
     REPRODUCTION_COOLDOWN, CONSUMER_NUTRIENT_RELEASE
@@ -10,7 +10,14 @@ from utils.constants import (
 from utils.toolbox import toolbox
 
 class Carnivore:
+    # Class variable to track organism IDs
     next_id = 0
+    
+    @classmethod
+    def reset_id_counter(cls):
+        """Reset the ID counter to 0."""
+        cls.next_id = 0
+
     def __init__(self, x, y, energy=10, genes=None, generation=0):
         self.x = x
         self.y = y
@@ -47,6 +54,16 @@ class Carnivore:
         return self.disease_timer > 0
 
     def update(self, producers, herbivores, carnivores, omnivores, environment):
+        # Get current grid dimensions to ensure we don't go out of bounds
+        from utils.config_manager import ConfigManager
+        config = ConfigManager()
+        grid_width = config.get_grid_width()
+        grid_height = config.get_grid_height()
+        
+        # Ensure coordinates are within bounds (in case grid was resized)
+        self.x = self.x % grid_width
+        self.y = self.y % grid_height
+        
         life_cost = BASE_LIFE_COST
         if self.is_infected():
             life_cost *= DISEASE_ENERGY_DRAIN_MULTIPLIER
@@ -60,8 +77,8 @@ class Carnivore:
         if self.energy <= 0:
             return
         if self.age > self.max_lifespan:
-            # Add nutrients back to environment when dying of old age
-            environment[self.x, self.y] += CONSUMER_NUTRIENT_RELEASE
+            # Add nutrients back to environment when dying of old age - use [y, x] order
+            environment[self.y, self.x] += CONSUMER_NUTRIENT_RELEASE
             self.energy = -1
             return
 
@@ -76,7 +93,8 @@ class Carnivore:
                 self.energy -= move_cost
                 if self.energy <= 0:
                     # Add nutrients back to environment when dying of starvation during movement
-                    environment[self.x, self.y] += CONSUMER_NUTRIENT_RELEASE
+                    # Ensure coordinates are within bounds and use [y, x] order
+                    environment[self.y, self.x] += CONSUMER_NUTRIENT_RELEASE
                     return
                 if self.check_and_eat_herbivore(herbivores):
                     break
@@ -92,7 +110,8 @@ class Carnivore:
                     self.energy -= move_cost
                     if self.energy <= 0:
                         # Add nutrients back to environment when dying of starvation during movement
-                        environment[self.x, self.y] += CONSUMER_NUTRIENT_RELEASE
+                        # Ensure coordinates are within bounds and use [y, x] order
+                        environment[self.y, self.x] += CONSUMER_NUTRIENT_RELEASE
                         return
                     if self.check_and_eat_herbivore(herbivores):
                         break
@@ -104,7 +123,8 @@ class Carnivore:
                 self.energy -= move_cost
                 if self.energy <= 0:
                     # Add nutrients back to environment when dying of starvation during movement
-                    environment[self.x, self.y] += CONSUMER_NUTRIENT_RELEASE
+                    # Ensure coordinates are within bounds and use [y, x] order
+                    environment[self.y, self.x] += CONSUMER_NUTRIENT_RELEASE
                     return
                 self.check_and_eat_herbivore(herbivores)
 
@@ -136,8 +156,15 @@ class Carnivore:
 
     def move_towards(self, direction, carnivores):
         dx, dy = direction
-        nx = (self.x + (1 if dx>0 else -1 if dx<0 else 0)) % GRID_WIDTH
-        ny = (self.y + (1 if dy>0 else -1 if dy<0 else 0)) % GRID_HEIGHT
+        
+        # Use dynamic grid dimensions
+        from utils.config_manager import ConfigManager
+        config = ConfigManager()
+        grid_width = config.get_grid_width()
+        grid_height = config.get_grid_height()
+        
+        nx = (self.x + (1 if dx>0 else -1 if dx<0 else 0)) % grid_width
+        ny = (self.y + (1 if dy>0 else -1 if dy<0 else 0)) % grid_height
         if not self.cell_occupied(nx, ny, carnivores):
             self.x, self.y = nx, ny
         else:
@@ -145,17 +172,24 @@ class Carnivore:
 
     def move_random(self, carnivores):
         tries = 5
+        
+        # Use dynamic grid dimensions
+        from utils.config_manager import ConfigManager
+        config = ConfigManager()
+        grid_width = config.get_grid_width()
+        grid_height = config.get_grid_height()
+        
         for _ in range(tries):
             d = random.choice(["UP","DOWN","LEFT","RIGHT"])
             nx, ny = self.x, self.y
             if d=="UP":
-                ny = (ny - 1) % GRID_HEIGHT
+                ny = (ny - 1) % grid_height
             elif d=="DOWN":
-                ny = (ny + 1) % GRID_HEIGHT
+                ny = (ny + 1) % grid_height
             elif d=="LEFT":
-                nx = (nx - 1) % GRID_WIDTH
+                nx = (nx - 1) % grid_width
             elif d=="RIGHT":
-                nx = (nx + 1) % GRID_WIDTH
+                nx = (nx + 1) % grid_width
             if not self.cell_occupied(nx, ny, carnivores):
                 self.x, self.y = nx, ny
                 return
